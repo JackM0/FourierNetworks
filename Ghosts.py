@@ -2,6 +2,7 @@ import numpy as np
 from radon.farey import Farey
 import matplotlib.pyplot as plt
 from scipy import ndimage
+from scipy import signal
 
 class Ghosts:
     """
@@ -15,6 +16,7 @@ class Ghosts:
         """
         self.N = N
         self.ghost = np.zeros((N , N))
+        self.kernels = np.array([[]])
         self.fttghost = np.zeros((N , N))
         self.pixels = np.array([])
     
@@ -45,6 +47,25 @@ class Ghosts:
         axs[0].imshow(self.ghost)
 
         plt.show()
+
+    def AddGhostKernel(self, pixel):
+        kernel = np.zeros((abs(pixel[0]) + 1, abs(pixel[1]) + 1))
+
+        if (pixel[1] < 0):
+            kernel[0, -1] = 1
+            kernel[pixel[0], pixel[1] - 1] = -1
+        else:
+            kernel[0, 0] = 1
+            kernel[pixel[0], pixel[1]] = -1
+        print(kernel)
+
+        self.ghost = signal.convolve(self.ghost, kernel) if self.ghost.size > 0 else kernel
+        
+
+    def ConvolutionGhosts(self):
+        for i, kernel in enumerate(self.kernels):
+            self.ghost = signal.convolve(self.ghost, kernel) if i > 0 else kernel
+        
     
     #   @fn FareyVectorsToCoords (0)
     def FareyVectorsToCoords(self, vectors, reset = 1):
@@ -128,14 +149,21 @@ class Ghosts:
 
 
 if __name__ == "__main__":
-    test_ghost = Ghosts(256)
-    farey_vectors = Farey()
-    farey_vectors.generate2(3, 8)
+    # test_ghost = Ghosts(256)
+    # farey_vectors = Farey()
+    # farey_vectors.generate2(3, 8)
 
-    test_ghost.FareyVectorsToCoords(farey_vectors.vectors)
-    test_ghost.BuildGhost()
+    # test_ghost.FareyVectorsToCoords(farey_vectors.vectors)
+    # test_ghost.BuildGhost()
 
-    test_ghost.PlotGhost()
-    test_ghost.ShiftGhost([3,3])
-    test_ghost.PlotGhost()
-        
+    # test_ghost.PlotGhost()
+    # test_ghost.ShiftGhost([3,3])
+    # test_ghost.PlotGhost()
+    test_ghost = Ghosts(5)
+    
+    print(test_ghost.ghost)
+    
+    test_ghost.AddGhostKernel([1,1])
+    test_ghost.AddGhostKernel([1,2])
+    test_ghost.AddGhostKernel([1,3])
+    print(test_ghost.ghost)
