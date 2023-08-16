@@ -1,8 +1,9 @@
 import numpy as np
-from radon.farey import Farey
 import matplotlib.pyplot as plt
 from scipy import ndimage
 from scipy import signal
+
+im_path = "./images/"
 
 class Ghosts:
     """
@@ -16,10 +17,9 @@ class Ghosts:
         """
         self.N = N
         self.ghost = np.zeros((N , N))
-        self.convoledkernels = np.array([[]])
+        self.cropped_ghost = np.array([[]])
         self.fttghost = np.array([[]])
         self.name = ""
-        self.kernel_pixels = np.array([[]])
 
     #   @fn PlotGhost (0)   
     def PlotGhost(self):
@@ -31,36 +31,33 @@ class Ghosts:
         axs[1].title.set_text("Ghost FFT")
         axs[2].imshow(np.angle(self.fttghost))
         axs[2].title.set_text("FFT Phase")
-        axs[0].imshow(self.ghost[100:150,100:150])
+        axs[0].imshow(self.cropped_ghost)
         axs[0].title.set_text("Ghost")
         
         f.suptitle(self.name)
         f.set_figheight(10)
         f.set_figwidth(10)
-        f.savefig('images/' + self.name + '.png')
+        f.savefig(im_path + self.name + '.png')
         plt.close(f)
         plt.show()
 
+    #   @fn ConvolveWithGhostKernel (0)
     def ConvolveWithGhostKernel(self, pixel):
+        """
+        Convolves the current ghost/set of kernels with a new ghost kernel specified by a (2PSE) Relative Pixel Position Vector
+        @param pixel_position ([int, int]) : The relative position of the -1 pixel in the kernel from the +1 pixel
+        """
+        # Create the Kernel and Convolved with the current Ghost
         kernel = self.CreateGhostKernel(pixel)
-        self.convoledkernels = signal.convolve(self.convoledkernels, kernel) if self.convoledkernels.size > 0 else kernel
+        self.cropped_ghost = signal.convolve(self.cropped_ghost, kernel) if self.cropped_ghost.size > 0 else kernel
         
+        # Adjust the Ghosts name to indicate which kernel has been applied to it
         self.name += np.array2string(pixel)
-        self.ghost[int(self.N / 2) : int(self.convoledkernels.shape[0] + self.N / 2), int(self.N / 2) : int(self.convoledkernels.shape[1] + self.N / 2)] = self.convoledkernels
+
+        # Embbed the resultant Ghost in an Image specified by the image size
+        self.ghost[int(self.N / 2) : int(self.cropped_ghost.shape[0] + self.N / 2), int(self.N / 2) : int(self.cropped_ghost.shape[1] + self.N / 2)] = self.cropped_ghost
         
         self.FFT_Ghost()
-    
-    def CreateGhostKernel(self, pixel):
-        kernel = np.zeros((abs(pixel[0]) + 1, abs(pixel[1]) + 1))
-
-        if (pixel[1] < 0):
-            kernel[0, -1] = 1
-            kernel[pixel[0], pixel[1] - 1] = -1
-        else:
-            kernel[0, 0] = 1
-            kernel[pixel[0], pixel[1]] = -1
-        
-        return kernel
     
     #   @fn FareyVectorsToCoords (0)
     def FareyVectorsToCoords(self, vectors):
@@ -76,8 +73,8 @@ class Ghosts:
         
         return pixels
                 
-    #   @fn BuildFareyGhost (0)
-    def BuildFareyGhost(self, pixels, build_fft = 1, rebuild = 1):
+    #   @fn BuildGhostFromPixels (0)
+    def BuildGhostFromPixels(self, pixels, build_fft = 1, rebuild = 1):
         """
         Builds/Loads the List of Pixel Coordinates into an actual Image/2D Array
         @param rebuild (int) : Indicate whether the ghost should be completely cleared before adding in the new pixels
@@ -143,6 +140,23 @@ class Ghosts:
         Calculates the 2D Inverse FFT of the Ghost
         """
         self.fttghost = np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(self.ghost)))
+
+    #   @fn CreateGhostKernel (1)
+    def CreateGhostKernel(self, pixel_position):
+        """
+        Create Ghost Kernel (2PSE) from a Relative Pixel Position Vector
+        @param pixel_position ([int, int]) : The relative position of the -1 pixel in the kernel from the +1 pixel
+        """
+        kernel = np.zeros((abs(pixel_position[0]) + 1, abs(pixel_position[1]) + 1))
+
+        if (pixel_position[1] < 0):
+            kernel[0, -1] = 1
+            kernel[pixel_position[0], pixel_position[1] - 1] = -1
+        else:
+            kernel[0, 0] = 1
+            kernel[pixel_position[0], pixel_position[1]] = -1
+        
+        return kernel
 
     #   @fn FareyToPixelCoord (1) 
     def FareyToPixelCoord(self, farey_vector):

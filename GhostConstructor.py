@@ -1,18 +1,26 @@
 import numpy as np
 from radon.farey import Farey
-import matplotlib.pyplot as plt
-from scipy import ndimage
-from scipy import signal
 from Ghosts import Ghosts
 
 
-class GhostConstructor:
+class GhostCreator:
+    """
+    Class that will Create a Set of Ghosts using possible combinations of 2PSE
+    """
     
     def __init__(self, N):
+        """
+        GhostCreator Constructor
+        @param N (int) : The Image Dimension
+        """
         self.N = N
         self.structuring_elements = np.array([[]])
         
     def PossibleConvolutionGhosts(self, size_grid):
+        """
+        Create Ghosts using all possible combinations of Ghost Kernels for a given grid size / Order of Farey Vectors
+        @param size_grid (int) : Specify the size_grid from which we want the 2PSE to have to fit within, also the order of Farey vectors that the gradient between pixels must be an element of
+        """
         self.Generate2PSEs(size_grid)
         num_elements = self.structuring_elements.shape[0]
         self.ghosts = []
@@ -53,6 +61,6 @@ class GhostConstructor:
             ghost.PlotGhost()
         
 if __name__ == "__main__":
-    constructor = GhostConstructor(256)
+    constructor = GhostCreator(256)
     constructor.PossibleConvolutionGhosts(3)
     constructor.PlotAllGhosts()
