@@ -8,7 +8,7 @@ class ICA:
 
     def __init__(self, n_components):
         self.transformer = FastICA(n_components = n_components, random_state = 0,
-                                    whiten='unit_variance')
+                                    whiten='unit-variance')
         
     def LoadDataset(self, dataset):
         self.dataset = dataset
@@ -61,9 +61,16 @@ class ICA:
 
 
     def PerformICA(self):
-        self.ICA = self.transformer.fit_transform(self.dataset)
+        self.ICA = self.transformer.fit_transform(self.images[0:20, :, :, :])
 
-    def DisplayCompnents(self):
+    def TripleChannelUnflatten(self):
+        self.channel_1 = self.dataset[:, 0 : 1024].reshape(60000, 32, 32)
+        self.channel_2 = self.dataset[:, 1024 : 2 * 1024].reshape(60000, 32, 32)
+        self.channel_3 = self.dataset[:, 2 * 1024 : 3 * 1024].reshape(60000, 32, 32)
+        self.images = np.zeros((60000, 32, 32, 3))
+        self.images[:, :, :, 0] = self.channel_1
+        self.images[:, :, :, 1] = self.channel_2
+        self.images[:, :, :, 2] = self.channel_3
         return
     
 
@@ -80,9 +87,11 @@ if __name__ == '__main__':
     ica.LoadTarfile(tar, files)
     print(ica.dataset.shape)
     print(ica.labels)
-    ica.dataset = ica.dataset[0:20, :]
+    ica.TripleChannelUnflatten()
+    print(ica.images.shape)
+    # ica.dataset = ica.dataset[0:20, :]
     ica.PerformICA()
-    print(ica.ICA)
+    # print(ica.ICA)
     
 
     
