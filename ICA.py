@@ -4,10 +4,11 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 
-class ICA:
+class SourceSeparator:
 
     def __init__(self):
-        self.transformer = self.transformer = FastICA(whiten="arbitrary-variance", max_iter=300)
+        self.transformer_ica= FastICA(max_iter=300, random_state=42)
+        self.transformer_pca = PCA()
         
     def LoadDataset(self, dataset):
         self.dataset = dataset
@@ -82,13 +83,15 @@ class ICA:
         r, g, b = self.channel_1, self.channel_2, self.channel_3
         self.gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
 
-    def PerformICA(self):
+    def PerformTransform(self):
         
-        self.ICA = self.transformer.fit(ica.fftmag[0:2000, :, :].reshape(2000, 32 * 32))
-        print(self.ICA.components_.shape)
+        self.ICA = self.transformer_ica.fit(self.fftmag[0:2000, :, :].reshape(2000, 32 * 32))
+        self.PCA = self.transformer_pca.fit(self.fftmag[0:2000, :, :].reshape(2000, 32 * 32))
+        
         self.ICA_images = self.ICA.components_.reshape((1024, 32, 32))
+        self.PCA_images = self.PCA.components_.reshape((1024, 32, 32))
         print("done")
-        
+
     def DisplayImages(self, images, log = False):
         fig=plt.figure(figsize=(16, 16))
         for i in range(64):
@@ -108,15 +111,16 @@ if __name__ == '__main__':
              'cifar-10-batches-bin/data_batch_5.bin',
              'cifar-10-batches-bin/test_batch.bin']
     
-    ica = ICA()
-    ica.LoadTarfile(tar, files)
-    print(ica.labels)
-    ica.TripleChannelUnflatten()
-    ica.FourierTransformImages()
+    separator = SourceSeparator()
+    separator.LoadTarfile(tar, files)
+    print(separator.labels)
+    separator.TripleChannelUnflatten()
+    separator.FourierTransformImages()
     #ica.DisplayImages(ica.gray)
     #ica.DisplayImages(ica.fftmag, True)
-    #ica.PerformICA()
-    #ica.DisplayImages(ica.ICA_images)
+    separator.PerformTransform()
+    separator.DisplayImages(separator.ICA_images)
+    separator.DisplayImages(separator.PCA_images)
     #print(ica.gray.shape)
     
     # ica.dataset = ica.dataset[0:20, :]
