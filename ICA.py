@@ -1,4 +1,4 @@
-from sklearn.decomposition import FastICA
+from sklearn.decomposition import FastICA, PCA
 import tarfile
 import numpy as np
 import os
@@ -6,9 +6,8 @@ import matplotlib.pyplot as plt
 
 class ICA:
 
-    def __init__(self, n_components):
-        self.transformer = FastICA(n_components = n_components, random_state = 0,
-                                    whiten='unit-variance')
+    def __init__(self):
+        self.transformer = self.transformer = FastICA(whiten="arbitrary-variance", max_iter=300)
         
     def LoadDataset(self, dataset):
         self.dataset = dataset
@@ -43,8 +42,8 @@ class ICA:
             # -- Next 32 * 32 * 3 = 3,072 bytes are its corresponding image
 
             # Labels are the first byte of every chunk
-            self.labels = buffr[::3073]
-
+            self.interger_labels = buffr[::3073]
+            
             # Pixels are everything remaining after we delete the labels
             pixels = np.delete(buffr, np.arange(0, buffr.size, 3073))
             self.dataset = pixels.reshape(-1, 3072).astype('float32') / 255
@@ -57,7 +56,7 @@ class ICA:
                 onehot[np.arange(n_rows), integer_labels] = 1
                 return onehot
 
-            self.labels = _onehot(self.labels)
+            self.labels = _onehot(self.interger_labels)
 
 
     def TripleChannelUnflatten(self):
@@ -68,18 +67,37 @@ class ICA:
         self.images[:, :, :, 0] = self.channel_1
         self.images[:, :, :, 1] = self.channel_2
         self.images[:, :, :, 2] = self.channel_3
-
         self.rgb2gray()
+        
+        self.gray_flattened = self.gray.reshape((60000, 32 * 32))
 
         return
+
+    def FourierTransformImages(self):
+        fft = np.fft.fftshift(np.fft.fft2(self.gray))
+        self.fftmag = np.abs(fft)
+        self.fftphase = np.angle(fft)
     
     def rgb2gray(self):
         r, g, b = self.channel_1, self.channel_2, self.channel_3
         self.gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
 
-
     def PerformICA(self):
-        self.ICA = self.transformer.fit_transform(ica.gray[0:20, :, :])
+        
+        self.ICA = self.transformer.fit(ica.fftmag[0:2000, :, :].reshape(2000, 32 * 32))
+        print(self.ICA.components_.shape)
+        self.ICA_images = self.ICA.components_.reshape((1024, 32, 32))
+        print("done")
+        
+    def DisplayImages(self, images, log = False):
+        fig=plt.figure(figsize=(16, 16))
+        for i in range(64):
+            ax=fig.add_subplot(8, 8, i+1)
+            if log:
+                ax.imshow(np.log(images[i, :, :]), cmap=plt.cm.bone)
+            else:
+                ax.imshow(images[i, :, :], cmap=plt.cm.bone)
+        plt.show()
 
 if __name__ == '__main__':
     tar = 'cifar-10-binary.tar.gz'
@@ -90,15 +108,17 @@ if __name__ == '__main__':
              'cifar-10-batches-bin/data_batch_5.bin',
              'cifar-10-batches-bin/test_batch.bin']
     
-    ica = ICA(6)
+    ica = ICA()
     ica.LoadTarfile(tar, files)
-    print(ica.dataset.shape)
     print(ica.labels)
     ica.TripleChannelUnflatten()
-    ica.PerformICA()
-    print(ica.gray.shape)
-    plt.imshow(np.abs(np.fft.fftshift(np.fft.fft2(ica.gray[0]))))
-    plt.show()
+    ica.FourierTransformImages()
+    #ica.DisplayImages(ica.gray)
+    #ica.DisplayImages(ica.fftmag, True)
+    #ica.PerformICA()
+    #ica.DisplayImages(ica.ICA_images)
+    #print(ica.gray.shape)
+    
     # ica.dataset = ica.dataset[0:20, :]
    
     # print(ica.ICA)
