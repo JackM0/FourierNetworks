@@ -20,9 +20,10 @@ class Ghosts:
         self.cropped_ghost = np.array([[]])
         self.fttghost = np.array([[]])
         self.name = ""
+        self.fail = False
 
     #   @fn PlotGhost (0)   
-    def PlotGhost(self):
+    def PlotGhost(self, location):
         """
         Plots the Ghost and the Magnitude and Phase of its Fourier Transform
         """
@@ -37,7 +38,7 @@ class Ghosts:
         f.suptitle(self.name)
         f.set_figheight(10)
         f.set_figwidth(10)
-        f.savefig(im_path + self.name + '.png')
+        f.savefig('./' + location + '/' + self.name + '.png')
         plt.close(f)
         plt.show()
 
@@ -55,8 +56,10 @@ class Ghosts:
         self.name += np.array2string(pixel)
 
         # Embbed the resultant Ghost in an Image specified by the image size
-        self.ghost[int(self.N / 2) : int(self.cropped_ghost.shape[0] + self.N / 2), int(self.N / 2) : int(self.cropped_ghost.shape[1] + self.N / 2)] = self.cropped_ghost
-        
+        try:
+            self.ghost[int(self.N / 2) : int(self.cropped_ghost.shape[0] + self.N / 2), int(self.N / 2) : int(self.cropped_ghost.shape[1] + self.N / 2)] = self.cropped_ghost
+        except:
+            self.fail = True
         self.FFT_Ghost()
     
     #   @fn FareyVectorsToCoords (0)

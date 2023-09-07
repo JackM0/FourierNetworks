@@ -26,7 +26,7 @@ class GhostCreator:
         self.ghosts = []
         
         for i in range(2 ** num_elements):
-            self.ghosts.append(Ghosts(256))    
+            self.ghosts.append(Ghosts(self.N))    
             
         for i, ghost in enumerate(self.ghosts):
             kernel_ids = []
@@ -56,11 +56,11 @@ class GhostCreator:
         for id in kernel_ids:
             ghost.ConvolveWithGhostKernel(self.structuring_elements[id])
             
-    def PlotAllGhosts(self):
+    def PlotAllGhosts(self, location):
         for ghost in self.ghosts:
-            ghost.PlotGhost()
+            ghost.PlotGhost(location)
         
 if __name__ == "__main__":
-    constructor = GhostCreator(256)
+    constructor = GhostCreator(32)
     constructor.PossibleConvolutionGhosts(3)
-    constructor.PlotAllGhosts()
+    constructor.PlotAllGhosts("images_cifar")
