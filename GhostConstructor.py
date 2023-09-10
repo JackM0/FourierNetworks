@@ -37,6 +37,9 @@ class GhostCreator:
                     kernel_ids.append(k)
             #print(kernel_ids)
             self.CreateConvolutionGhost(ghost, kernel_ids)
+        
+        self.ghosts = self.ghosts[1:]
+        self.ghost_images = np.array([Ghost.ghost for Ghost in self.ghosts])
     
     def Generate2PSEs(self, size_grid):
         farey_vector_generator = Farey()
@@ -63,4 +66,5 @@ class GhostCreator:
 if __name__ == "__main__":
     constructor = GhostCreator(32)
     constructor.PossibleConvolutionGhosts(3)
-    constructor.PlotAllGhosts("images_cifar")
+    print(constructor.ghost_images)
+    #constructor.PlotAllGhosts("images_cifar")
