@@ -4,8 +4,6 @@ from DataLoader import DataLoader
 from GhostConstructor import GhostCreator
 from SourceSeparator import SourceSeparator
 
-import pandas as pd
-
 class GhostTransform:
     """
     Class that will Create a Set of Ghosts using possible combinations of 2PSE
@@ -58,6 +56,28 @@ class GhostTransform:
 
         return B
     
+    def gram_schmidt(self):
+        vectors = self.constructor.ghost_images.reshape((-1, 32 * 32))
+        num_vectors, vector_dim = vectors.shape
+        ortho_basis = np.zeros((num_vectors, vector_dim))
+        
+        for i in range(num_vectors):
+            print(i)
+            # Start with the original vector
+            ortho_basis[i] = vectors[i]
+            
+            # Subtract projections onto previously orthogonalized vectors
+            for j in range(i):
+                projection = np.dot(vectors[i], ortho_basis[j]) / np.dot(ortho_basis[j], ortho_basis[j])
+                ortho_basis[i] -= projection * ortho_basis[j]
+            
+            # Normalize the orthogonalized vector
+            norm = np.linalg.norm(ortho_basis[i])
+            if norm != 0:
+                ortho_basis[i] /= norm
+        
+        return ortho_basis
+    
     def QRDecomposition(self, images):
         """
         Applies the Gram-Schmidt method to A
@@ -74,22 +94,40 @@ class GhostTransform:
         return Q, R
 
     def HouseHolderQRDecomposition(self):
-        images = self.loader.gray_flattened.T
+        images = self.constructor.ghost_images.reshape((-1, 32 * 32)).T
+        print(images.shape)
         [m,n] = images.shape
         Q = np.eye(m)
         R = images.copy()
 
-        for j in range(1, n):
+        for j in range(n):
             print(j)
-            normx = np.norm(R[j:-1, j])
+            max_index = np.argmax(np.abs(R[j:, j])) + j
+            print(max_index)
+            if max_index != j:
+                # Swap columns in both R and Q to make R[j,j] the largest element
+                R[[j, max_index], :] = R[[max_index, j], :]
+                Q[[j, max_index], :] = Q[[max_index, j], :]
+            normx = np.sqrt(np.dot(R[j:, j], R[j:, j]))
+            print(normx)
             s = -np.sign(R[j,j])
+            print(s, R[j,j])
             u1 = R[j,j] - s * normx
-            w = R[j:-1, j] / u1
-            w[1] = 1
+            print(u1)
+            w = (R[j:, j] / u1).reshape((-1, 1))
+            #print(w)
+            #print(w)
+            w[0] = 1
             tau = -s * u1 / normx
+            #print(tau.shape)
+            #print('testmg')
+            step1 = w.T @ R[j:, :]
+            step2 = (tau * w)
+            #print(step1.shape)
+            #print(step2.shape)
 
-            R[j:-1, :] = R[j:-1, :] - (tau * w) @ (w.T * R[j:-1, :])
-            Q[:, j:-1] = Q[:, j:-1] - (Q[:, j : -1] * w) @ (tau * w)
+            R[j:, :] = R[j:, :] - (tau * w) @ (w.T @ R[j:, :])
+            Q[:, j:] = Q[:, j:] - (Q[:, j :] @ w) @ (tau * w).T
         
         return Q, R
 
@@ -187,7 +225,11 @@ if __name__ == '__main__':
     ghost_transform.LoadRGBImagesFromTarfile(tar, files)
     ghost_transform.InitaliseGhosts(3)
     print(ghost_transform.loader.gray_flattened.shape)
-    print(ghost_transform.ModifiedGramSchmidt())
+    # Q, R = ghost_transform.HouseHolderQRDecomposition()
+    # print(Q)
+
+    # print(R)
+    print(ghost_transform.gram_schmidt())
     #ghost_transform.LinearDecompositionGhosts()
 
     
