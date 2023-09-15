@@ -41,6 +41,32 @@ class GhostCreator:
         self.ghosts = self.ghosts[1:]
         self.ghost_images = np.array([Ghost.ghost for Ghost in self.ghosts])
     
+    def CreateGhostsFrom2PSE(self, size_grid, max_occurances):
+        self.Generate2PSEs(size_grid)
+        num_elements = self.structuring_elements.shape[0]
+        self.ghosts = []
+        
+        for i in range((max_occurances + 1) ** num_elements):
+            self.ghosts.append(Ghosts(self.N))
+
+            
+        for i, ghost in enumerate(self.ghosts):
+            kernel_ids = []
+            s = ""
+            n = i
+
+            while n:
+                s = str(n % (max_occurances + 1)) + s
+                n //= (max_occurances + 1)
+            print(s)
+            for index, element in enumerate(s):
+                for j in range(int(element)):
+                    kernel_ids.append(index)
+            #print(kernel_ids)
+            self.CreateConvolutionGhost(ghost, kernel_ids)    
+        self.ghosts = self.ghosts[1:]
+        self.ghost_images = np.array([Ghost.ghost for Ghost in self.ghosts])
+    
     def Generate2PSEs(self, size_grid):
         farey_vector_generator = Farey()
         farey_vector_generator.generate(size_grid - 1, 2)
