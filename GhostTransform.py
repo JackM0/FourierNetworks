@@ -20,12 +20,12 @@ class GhostTransform:
         self.loader.TripleChannelUnflatten()
         self.loader.FourierTransformImages()
     
-    def InitaliseGhosts(self, element_size):
+    def InitaliseGhosts(self, element_size, max_occurances = 2):
         """
         Initalise a set of ghosts to be used as the basis functions for the images fourier space
         """
         self.constructor = GhostCreator(32)
-        self.constructor.CreateGhostsFrom2PSE(element_size, 5)
+        self.constructor.CreateGhostsFrom2PSE(element_size,  max_occurances)
         print("ghosts made")
         return
     
@@ -112,11 +112,11 @@ class GhostTransform:
     def DisplayQR(self, Q):
         print(Q.shape)
         Q[np.abs(Q) < 10**(-14)] = 0
-        fig=plt.figure(figsize=(16, 16))
+        fig=plt.figure(figsize=(32, 32))
         num_columns = Q.shape[1]
         for i in range(64):
-            ax=fig.add_subplot(8, 8, i+1)
-            ax.imshow(Q[i, :].reshape((32, 32)), cmap=plt.cm.bone)
+            ax=fig.add_subplot(8,8, i+1)
+            ax.imshow(Q[:, i].reshape((32, 32)), cmap=plt.cm.bone)
         plt.show()
     
     
@@ -154,7 +154,7 @@ if __name__ == '__main__':
     ghost_transform.InitaliseGhosts(3)
     print(ghost_transform.loader.gray_flattened.shape)
     Q, R = ghost_transform.HouseHolderQRDecomposition()
-    ghost_transform.ConstructGramMatrix(Q.T.reshape((-1, 32, 32)))
+    ghost_transform.ConstructGramMatrix(Q.T.reshape((-1,32, 32)))
     ghost_transform.LinearDecompositionGhosts()
     
 

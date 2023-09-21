@@ -142,7 +142,7 @@ class Ghosts:
         """
         Calculates the 2D Inverse FFT of the Ghost
         """
-        self.fttghost = np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(self.ghost)))
+        self.fttghost = np.fft.ifft2(np.fft.ifftshift(self.ghost))
 
     #   @fn CreateGhostKernel (1)
     def CreateGhostKernel(self, pixel_position):

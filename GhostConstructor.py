@@ -69,9 +69,14 @@ class GhostCreator:
     
     def Generate2PSEs(self, size_grid):
         farey_vector_generator = Farey()
-        farey_vector_generator.generate(size_grid - 1, 2)
+        farey_vector_generator.generate(size_grid - 1, 4)
         vectors = np.array(farey_vector_generator.vectors)
-        
+        #print(vectors)
+
+        vectors = np.unique(vectors)
+        print(vectors)
+
+
         self.structuring_elements = np.empty((vectors.size, 2)).astype(int)
         for i, vector in enumerate(vectors):
             self.structuring_elements[i] = self.FareyTo2PSE(vector)
@@ -92,5 +97,7 @@ class GhostCreator:
 if __name__ == "__main__":
     constructor = GhostCreator(32)
     constructor.PossibleConvolutionGhosts(3)
-    print(constructor.ghost_images)
-    #constructor.PlotAllGhosts("images_cifar")
+    
+    constructor.PlotAllGhosts("ghosts_3_unshifted")
+
+    #constructor.Generate2PSEs(3)
