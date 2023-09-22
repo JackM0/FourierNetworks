@@ -3,8 +3,6 @@ import matplotlib.pyplot as plt
 from scipy import ndimage
 from scipy import signal
 
-im_path = "./images/"
-
 class Ghosts:
     """
     Create Ghosts from Farey Vectors, manipulate them, calculate their Receptive Fields and Display them
@@ -32,8 +30,15 @@ class Ghosts:
         axs[1].title.set_text("Ghost FFT")
         axs[2].imshow(np.angle(self.fttghost))
         axs[2].title.set_text("FFT Phase")
-        axs[0].imshow(self.cropped_ghost)
+        axs[0].imshow(self.ghost)
         axs[0].title.set_text("Ghost")
+        
+        axs[0].set_xticks(np.arange(1,32, 2))
+        axs[0].set_yticks(np.arange(1,32, 2))
+        axs[1].set_xticks(np.arange(1,32, 2))
+        axs[1].set_yticks(np.arange(1,32, 2))
+        axs[2].set_xticks(np.arange(1,32, 2))
+        axs[2].set_yticks(np.arange(1,32, 2))
         
         f.suptitle(self.name)
         f.set_figheight(10)
@@ -42,40 +47,37 @@ class Ghosts:
         plt.close(f)
         plt.show()
 
-    #   @fn ConvolveWithGhostKernel (0)
-    def ConvolveWithGhostKernel(self, pixel):
+    #   @fn ConvolveWithGhost (0)
+    def ConvolveWithGhost(self, kernel):
         """
         Convolves the current ghost/set of kernels with a new ghost kernel specified by a (2PSE) Relative Pixel Position Vector
-        @param pixel_position ([int, int]) : The relative position of the -1 pixel in the kernel from the +1 pixel
+        @param kernel ([int, int]) : The kernel to be convoled with the Ghost
         """
         # Create the Kernel and Convolved with the current Ghost
-        kernel = self.CreateGhostKernel(pixel)
         self.cropped_ghost = signal.convolve(self.cropped_ghost, kernel) if self.cropped_ghost.size > 0 else kernel
-        
-        # Adjust the Ghosts name to indicate which kernel has been applied to it
-        self.name += np.array2string(pixel)
 
         # Embbed the resultant Ghost in an Image specified by the image size
-        try:
-            self.ghost[int(self.N / 2) : int(self.cropped_ghost.shape[0] + self.N / 2), int(self.N / 2) : int(self.cropped_ghost.shape[1] + self.N / 2)] = self.cropped_ghost
-        except:
+        if self.cropped_ghost.shape[0] > self.N or self.cropped_ghost.shape[1] > self.N:
             self.fail = True
+        else:
+            self.EmbebbedGhost()
+
         self.FFT_Ghost()
     
-    #   @fn FareyVectorsToCoords (0)
-    def FareyVectorsToCoords(self, vectors):
-        """
-        Converts a List of Farey Vectors into (x,y) pixel coordinates
-        @param vectors ([complex numbers]) : A list of complex numbers
-        """
-        vectors = np.array(vectors)
+    #   @fn EmbebbedGhost (1)
+    def EmbebbedGhost(self):
+        h = self.cropped_ghost.shape[0]
+        w = self.cropped_ghost.shape[1]
         
-        pixels = np.empty((vectors.size, 2))
-        for i, vector in enumerate(vectors):
-            pixels[i] = self.FareyToPixelCoord(vector)
+        a = (self.N - h) // 2
+        aa = self.N - a - h
+
+        b = (self.N - w) // 2
+        bb = self.N - b - w
         
-        return pixels
-                
+        self.ghost = np.pad(self.cropped_ghost, pad_width=((a, aa), (b, bb)), mode='constant')
+        return
+
     #   @fn BuildGhostFromPixels (0)
     def BuildGhostFromPixels(self, pixels, build_fft = 1, rebuild = 1):
         """
@@ -143,46 +145,3 @@ class Ghosts:
         Calculates the 2D Inverse FFT of the Ghost
         """
         self.fttghost = np.fft.ifft2(np.fft.ifftshift(self.ghost))
-
-    #   @fn CreateGhostKernel (1)
-    def CreateGhostKernel(self, pixel_position):
-        """
-        Create Ghost Kernel (2PSE) from a Relative Pixel Position Vector
-        @param pixel_position ([int, int]) : The relative position of the -1 pixel in the kernel from the +1 pixel
-        """
-        kernel = np.zeros((abs(pixel_position[0]) + 1, abs(pixel_position[1]) + 1))
-
-        if (pixel_position[1] < 0):
-            kernel[0, -1] = 1
-            kernel[pixel_position[0], pixel_position[1] - 1] = -1
-        else:
-            kernel[0, 0] = 1
-            kernel[pixel_position[0], pixel_position[1]] = -1
-        
-        return kernel
-
-    #   @fn FareyToPixelCoord (1) 
-    def FareyToPixelCoord(self, farey_vector):
-        """
-        Convert a Farey Vector (Complex Number) into a pixel coordinate
-        @param farey_vector (complex number) : A Farey Vector
-        @returns [x,y] Pixel Coordinate
-        """
-        return [-np.imag(farey_vector) + self.N / 2, np.real(farey_vector) + self.N / 2, ]
-
-
-if __name__ == "__main__":
-    # test_ghost = Ghosts(256)
-    # farey_vectors = Farey()
-    # farey_vectors.generate2(3, 8)
-
-    # test_ghost.FareyVectorsToCoords(farey_vectors.vectors)
-    # test_ghost.BuildGhost()
-
-    # test_ghost.PlotGhost()
-    # test_ghost.ShiftGhost([3,3])
-    # test_ghost.PlotGhost()
-    test_ghost1 = Ghosts(256)
-    pses = test_ghost1.Generate2PSEs(3)
-    test_ghost1.ConvolveWithGhostKernel(pses[0])
-    test_ghost1.PlotGhost()
