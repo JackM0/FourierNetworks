@@ -5,7 +5,7 @@ from GhostConstructor import GhostCreator
 from SourceSeparator import SourceSeparator
 from scipy import linalg
 import matplotlib.pyplot as plt
-
+import sys
 class GhostTransform:
     """
     Class with functions that are used to try to find a set of basis images using Ghosts as a starting point and decomposs images using these basis images
@@ -31,11 +31,18 @@ class GhostTransform:
         
     def HouseHolderQRDecomposition(self):
         # Convert an Array of N * N images into an array where each column is a vector of length N * N
-        image_matrix = self.constructor.ghost_images.reshape((-1, self.N * self.N)).T
-        Q, R, P = linalg.qr(image_matrix, pivoting=True)
+        receptive_field_matrix = self.constructor.receptive_field_images.reshape((-1, self.N * self.N)).T
+        Q, R, P = linalg.qr(receptive_field_matrix, pivoting=True)
         
-        self.basis_images = Q.T.reshape((-1, self.N, self.N))
-        self.basis_images[np.abs(self.basis_images) < 10**(-14)]    
+        self.RF_basis_images = Q.T.reshape((-1, self.N, self.N))
+        self.RF_basis_images[np.abs(self.RF_basis_images) < 10**(-14)]    
+
+        # Convert an Array of N * N images into an array where each column is a vector of length N * N
+        ghost_matrix = self.constructor.ghost_images.reshape((-1, self.N * self.N)).T
+        Q, R, P = linalg.qr(ghost_matrix, pivoting=True)
+        
+        self.ghost_basis_images = Q.T.reshape((-1, self.N, self.N))
+        self.ghost_basis_images[np.abs(self.ghost_basis_images) < 10**(-14)]   
         
         # print(images.shape)
         # [m,n] = images.shape
@@ -72,11 +79,8 @@ class GhostTransform:
 
         #     R[j:, :] = R[j:, :] - (tau * w) @ (w.T @ R[j:, :])
         #     Q[:, j:] = Q[:, j:] - (Q[:, j :] @ w) @ (tau * w).T
-        
-        return Q, R
 
-
-    def DisplayImages(self, images, images_to_display):
+    def DisplayImages(self, images, images_to_display, display):
         num_images = len(images_to_display)
         display_rows_cols = int(num_images**0.5)
 
@@ -84,8 +88,20 @@ class GhostTransform:
         for i, image_index in enumerate(images_to_display):
             ax=fig.add_subplot(display_rows_cols, display_rows_cols, i+1)
             ax.imshow(images[image_index, :, :], cmap=plt.cm.bone)
-            
-        plt.show()
+
+        if display:  
+            plt.show()
+
+        return fig
+
+    def SaveAllImages(self, images, name_prefix):
+        location = 'ghost_transform_3'
+        total_num_images = images.shape[0]
+        for i in range(16):
+            images_to_display = np.arange(0 + i * 64, (i + 1) * 64, 1, dtype=int)
+            self.DisplayImages(images, images_to_display, display = False).savefig('./' + location + '/' + name_prefix + str(i) + '.png')
+            plt.close()
+        
     
     
     def LinearDecompositionGhosts(self):
@@ -95,18 +111,19 @@ class GhostTransform:
         self.separator = SourceSeparator()
         self.separator.PerformTransform(self.loader.fftmag, len(self.loader.fftmag))
 
-        results = np.zeros((self.basis_images.shape[0], self.separator.PCA_images.shape[0]))
-        norms = np.zeros(self.basis_images.shape[0])
-        for i, basis in enumerate(self.basis_images):
+        results = np.zeros((self.ghost_basis_images.shape[0], self.separator.PCA_images.shape[0]))
+        norms = np.zeros(self.ghost_basis_images.shape[0])
+        for i, basis in enumerate(self.ghost_basis_images):
             for j, image in enumerate(self.separator.PCA_images):
                     results[i, j] = np.dot(image.reshape(-1), basis.reshape(-1)) / np.dot(basis.reshape(-1), basis.reshape(-1))
                     norms[i] = np.dot(basis.reshape(-1), basis.reshape(-1))
         
         print(np.square(results))
+        np.set_printoptions(threshold=sys.maxsize)
         print(np.argmax(np.square(results), 0))
-        print(np.argmax(np.square(results), 1))
-        sums = np.sum(np.square(results), 1)
-        print(sums)
+        #print(np.argmax(np.square(results), 1))
+        #sums = np.sum(np.square(results), 1)
+        #print(sums)
       
     def ConstructGramMatrix(self, images):
         # Matrix that checks if the set of images are linearly independant
@@ -134,12 +151,14 @@ if __name__ == '__main__':
     ghost_transform.InitaliseGhosts(size_grid = 3, num_octants = 4, max_occurances = 2)
     print(ghost_transform.loader.gray_flattened.shape)
     
-    Q, R = ghost_transform.HouseHolderQRDecomposition()
-    images_to_display = np.arange(0, 64, 1, dtype=int)
-    # images_to_display = np.arange(0, 1024, 16, dtype=int)
-    ghost_transform.DisplayImages(ghost_transform.basis_images, images_to_display)
+    ghost_transform.HouseHolderQRDecomposition()
+    # images_to_display = np.arange(0, 64, 1, dtype=int)
+    # # images_to_display = np.arange(0, 1024, 16, dtype=int)
+    # ghost_transform.DisplayImages(ghost_transform.basis_images, images_to_display)
+    ghost_transform.SaveAllImages(ghost_transform.ghost_basis_images, 'ghosts_')
+    ghost_transform.SaveAllImages(ghost_transform.RF_basis_images, "rf_")
     
-    ghost_transform.ConstructGramMatrix(ghost_transform.basis_images)
+    #ghost_transform.ConstructGramMatrix(ghost_transform.basis_images)
     ghost_transform.LinearDecompositionGhosts()
     
 

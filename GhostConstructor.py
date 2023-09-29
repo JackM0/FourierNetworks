@@ -59,6 +59,7 @@ class GhostCreator:
                 
         self.ghosts = self.ghosts[1:]
         self.ghost_images = np.array([Ghost.ghost for Ghost in self.ghosts])
+        self.receptive_field_images = np.array([np.abs(Ghost.fttghost) for Ghost in self.ghosts])
     
     #   @fn Generate2PSEs (1)
     def Generate2PSEs(self, size_grid, num_octants):
