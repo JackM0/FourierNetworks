@@ -6,6 +6,8 @@ from SourceSeparator import SourceSeparator
 from scipy import linalg
 import matplotlib.pyplot as plt
 import sys
+import os 
+
 class GhostTransform:
     """
     Class with functions that are used to try to find a set of basis images using Ghosts as a starting point and decomposs images using these basis images
@@ -43,6 +45,15 @@ class GhostTransform:
         
         self.ghost_basis_images = Q.T.reshape((-1, self.N, self.N))
         self.ghost_basis_images[np.abs(self.ghost_basis_images) < 10**(-14)]   
+
+
+        self.ghost_basis_images_ifft = np.zeros(self.ghost_basis_images.shape)
+        self.ghost_basis_images_fft = np.zeros(self.ghost_basis_images.shape)
+
+
+        for i, image in enumerate(self.ghost_basis_images):
+            self.ghost_basis_images_fft[i, :, :] = np.abs(np.fft.fftshift(np.fft.fft2((image))))
+            self.ghost_basis_images_ifft[i, :, :] = np.abs(np.fft.ifft2(np.fft.ifftshift((image))))
         
         # print(images.shape)
         # [m,n] = images.shape
@@ -95,11 +106,14 @@ class GhostTransform:
         return fig
 
     def SaveAllImages(self, images, name_prefix):
-        location = 'ghost_transform_3'
-        total_num_images = images.shape[0]
+        location = './ghost_transform_3'
+
+        if(not os.path.exists(location)):
+            os.makedirs(location)
+
         for i in range(16):
             images_to_display = np.arange(0 + i * 64, (i + 1) * 64, 1, dtype=int)
-            self.DisplayImages(images, images_to_display, display = False).savefig('./' + location + '/' + name_prefix + str(i) + '.png')
+            self.DisplayImages(images, images_to_display, display = False).savefig(location + '/' + name_prefix + str(i) + '.png')
             plt.close()
         
     
@@ -147,9 +161,9 @@ if __name__ == '__main__':
     
     
     ghost_transform = GhostTransform(32)
-    ghost_transform.LoadRGBImagesFromTarfile(tar, files, (32, 32, 3), 10000)
+    #ghost_transform.LoadRGBImagesFromTarfile(tar, files, (32, 32, 3), 10000)
     ghost_transform.InitaliseGhosts(size_grid = 3, num_octants = 4, max_occurances = 2)
-    print(ghost_transform.loader.gray_flattened.shape)
+    #print(ghost_transform.loader.gray_flattened.shape)
     
     ghost_transform.HouseHolderQRDecomposition()
     # images_to_display = np.arange(0, 64, 1, dtype=int)
@@ -157,9 +171,11 @@ if __name__ == '__main__':
     # ghost_transform.DisplayImages(ghost_transform.basis_images, images_to_display)
     ghost_transform.SaveAllImages(ghost_transform.ghost_basis_images, 'ghosts_')
     ghost_transform.SaveAllImages(ghost_transform.RF_basis_images, "rf_")
-    
+    ghost_transform.SaveAllImages(ghost_transform.ghost_basis_images_ifft, "ghosts_ifft_")
+    ghost_transform.SaveAllImages(ghost_transform.ghost_basis_images_fft, "ghosts_fft_")
+
     #ghost_transform.ConstructGramMatrix(ghost_transform.basis_images)
-    ghost_transform.LinearDecompositionGhosts()
+    #ghost_transform.LinearDecompositionGhosts()
     
 
     

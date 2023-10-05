@@ -1,5 +1,6 @@
 import numpy as np
 from radon.farey import Farey
+import os
 
 from Ghosts import Ghosts
 
@@ -19,6 +20,9 @@ class GhostCreator:
     
     #   @fn PlotAllGhosts (0)    
     def PlotAllGhosts(self, location):
+        if(not os.path.exists(location)):
+            os.makedirs(location)
+
         for ghost in self.ghosts:
             ghost.PlotGhost(location)
 
@@ -124,4 +128,4 @@ class GhostCreator:
 if __name__ == "__main__":
     constructor = GhostCreator(32)
     constructor.CreateGhostsFrom2PSE(size_grid = 3, num_octants = 4, max_occurances = 1)
-    constructor.PlotAllGhosts("ghosts_3")
+    constructor.PlotAllGhosts("./ghosts_3")
