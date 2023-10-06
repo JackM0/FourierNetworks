@@ -1,0 +1,12 @@
+Every few basis functions look very much like the Hermit polynomials, however eventually they stop looking like them
+
+You get more looking like Hermite polynomials if you use more copies of the original 2PSE, so perhaps the ones that dont look like the Hermite polynomials are mistakes
+
+The ones that do look like Hermit polynomials appear in the same order as the order of the polynomial they represent
+
+The ones that do look like hermite polynomials hae the checker pattern, unless you do the opposite fft shift
+
+https://www.researchgate.net/figure/The-Cartesian-and-polar-families-of-two-dimensional-Hermite-TDH-functions-For_fig7_26879154
+
+
+Also it does seem when i increase the number of 2pse used, some of the "noise" is removed from the basis functions
