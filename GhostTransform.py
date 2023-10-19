@@ -3,6 +3,7 @@ import numpy as np
 from DataLoader import DataLoader
 from GhostConstructor import GhostCreator
 from SourceSeparator import SourceSeparator
+from HermiteConstructor import HermiteConstructor
 from scipy import linalg
 import matplotlib.pyplot as plt
 import sys
@@ -53,6 +54,11 @@ class GhostTransform:
             self.ghost_basis_images_ifft[i, :, :] = np.fft.ifft2(np.fft.ifftshift((image)))
             self.ghost_basis_images_noshift_ifft[i, :, :] = np.fft.ifft2(image)
             self.ghost_basis_images_noshift_fft[i, :, :] = np.fft.fft2(image)
+
+        self.RF_basis_images_fft = np.zeros(self.ghost_basis_images.shape, dtype=np.complex_)
+
+        for i, image in enumerate(self.RF_basis_images):
+            self.RF_basis_images_fft[i, :, :] = np.fft.fftshift(np.fft.fft2((image)))
         
         # print(images.shape)
         # [m,n] = images.shape
@@ -149,6 +155,40 @@ class GhostTransform:
                 
         print(f"The Gram Matrix has a determinate of {linalg.det(self.gram)}")   
 
+
+    def DecomposeHermite(self):
+        hermite_constructor = HermiteConstructor()
+
+        # Define the dimensions of the mask (e.g., 8x8)
+        width, height = 32, 32
+        # Specify the order and rotation angle of the Hermite functions
+        max_order = 10  # The maximum order number
+
+        orders = []
+
+        for i in range(max_order + 1):
+            for j in range(max_order + 1):
+                orders.append((i, j))
+        orders = sorted(orders, key=lambda pair: max(pair))
+        rotation_angle_degrees = 45  # Change the angle as desired
+
+        hermite_constructor.CreateHermiteSet(width, height, orders, rotation_angle_degrees)
+
+        results = np.zeros((self.constructor.ghost_images.shape[0], hermite_constructor.hermite_functions.shape[0]))
+        norms = np.zeros(hermite_constructor.hermite_functions.shape[0])
+        
+        for i, ghost in enumerate(self.constructor.ghost_images):
+            for j, hermite in enumerate(hermite_constructor.hermite_functions):
+                    results[i, j] = np.dot(hermite.reshape(-1), ghost.reshape(-1)) / np.dot(hermite.reshape(-1), hermite.reshape(-1))
+                    norms[j] = np.dot(hermite.reshape(-1), hermite.reshape(-1))
+        
+
+        print(np.square(results))
+        print(norms)
+        # np.set_printoptions(threshold=sys.maxsize)
+        #print(np.argmax(np.square(results), 1))
+        print(np.sum(np.square(results), axis = 1))
+
 if __name__ == '__main__':
     tar = 'cifar-10-binary.tar.gz'
     files = ['cifar-10-batches-bin/data_batch_1.bin',
@@ -161,20 +201,17 @@ if __name__ == '__main__':
     
     ghost_transform = GhostTransform(32)
     #ghost_transform.LoadRGBImagesFromTarfile(tar, files, (32, 32, 3), 10000)
-    ghost_transform.InitaliseGhosts(size_grid = 3, num_octants = 4, max_occurances = 3)
+    ghost_transform.InitaliseGhosts(size_grid = 3, num_octants = 4, max_occurances = 2)
     #print(ghost_transform.loader.gray_flattened.shape)
     
     ghost_transform.HouseHolderQRDecomposition()
+
     # images_to_display = np.arange(0, 64, 1, dtype=int)
     # # images_to_display = np.arange(0, 1024, 16, dtype=int)
     # ghost_transform.DisplayImages(ghost_transform.basis_images, images_to_display)
     ghost_transform.SaveAllImages(ghost_transform.ghost_basis_images, 'ghosts_')
-    
-    ghost_transform.SaveAllImages(np.abs(ghost_transform.RF_basis_images), "rf_abs_")
-    ghost_transform.SaveAllImages(np.angle(ghost_transform.RF_basis_images), "rf_phase_")
-    ghost_transform.SaveAllImages(np.real(ghost_transform.RF_basis_images), "rf_real_")
-    ghost_transform.SaveAllImages(np.imag(ghost_transform.RF_basis_images), "rf_imag_")
-    
+    ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images), 'ghosts_abs_')
+
     ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images_ifft), "ghosts_ifft_abs_")
     ghost_transform.SaveAllImages(np.angle(ghost_transform.ghost_basis_images_ifft), "ghosts_ifft_angle_")
     ghost_transform.SaveAllImages(np.real(ghost_transform.ghost_basis_images_ifft), "ghosts_ifft_real_")
@@ -194,6 +231,20 @@ if __name__ == '__main__':
     ghost_transform.SaveAllImages(np.angle(ghost_transform.ghost_basis_images_noshift_ifft), "ghosts_noshift_ifft_angle_")
     ghost_transform.SaveAllImages(np.real(ghost_transform.ghost_basis_images_noshift_ifft), "ghosts_noshift_ifft_real_")
     ghost_transform.SaveAllImages(np.imag(ghost_transform.ghost_basis_images_noshift_ifft), "ghosts_noshift_ifft_imag_")
+
+        
+    ghost_transform.SaveAllImages(np.abs(ghost_transform.RF_basis_images), "rf_abs_")
+    ghost_transform.SaveAllImages(np.angle(ghost_transform.RF_basis_images), "rf_phase_")
+    ghost_transform.SaveAllImages(np.real(ghost_transform.RF_basis_images), "rf_real_")
+    ghost_transform.SaveAllImages(np.imag(ghost_transform.RF_basis_images), "rf_imag_")
+
+    ghost_transform.SaveAllImages(np.abs(ghost_transform.RF_basis_images_fft), "rf_fft_abs_")
+    ghost_transform.SaveAllImages(np.angle(ghost_transform.RF_basis_images_fft), "rf_fft_phase_")
+    ghost_transform.SaveAllImages(np.real(ghost_transform.RF_basis_images_fft), "rf_fft_real_")
+    ghost_transform.SaveAllImages(np.imag(ghost_transform.RF_basis_images_fft), "rf_fft_imag_")
+
+    ghost_transform.DecomposeHermite()
+
 
     #ghost_transform.ConstructGramMatrix(ghost_transform.basis_images)
     #ghost_transform.LinearDecompositionGhosts()
