@@ -28,7 +28,7 @@ class HermiteConstructor:
         
         for hermite in self.hermite_functions:
             for hermite2 in self.hermite_functions:
-                integral = np.abs(simps(simps(hermite * hermite2 * np.exp((-x**2  - y**2) / 2), y), x))
+                integral = np.abs(simps(simps(hermite * hermite2 , y), x))
                 if np.isclose(integral, 1.0, atol=1e-3) or np.isclose(integral, 0, atol=1e-3):
                     pass
                 else:

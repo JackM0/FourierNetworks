@@ -157,7 +157,7 @@ class GhostTransform:
         print(f"The Gram Matrix has a determinate of {linalg.det(self.gram)}")   
 
 
-    def DecomposeHermite(self):
+    def  DecomposeHermite(self):
         hermite_constructor = HermiteConstructor()
 
         # Define the dimensions of the mask (e.g., 8x8)
@@ -176,8 +176,8 @@ class GhostTransform:
         hermite_constructor.CreateHermiteSet(width, height, orders, rotation_angle_degrees)
 
         results = np.zeros((self.constructor.ghost_images.shape[0], hermite_constructor.hermite_functions.shape[0]))
-        norms = np.zeros(hermite_constructor.hermite_functions.shape[0])
-        
+        hermite_norms = np.zeros(hermite_constructor.hermite_functions.shape[0])
+        ghost_norms = np.zeros(self.constructor.ghost_images.shape[0])
         x = np.linspace(-width / 8, width / 8, width)
         y = np.linspace(-height / 8, height / 8, height)
         print(hermite_constructor.hermite_functions.shape[0])
@@ -185,10 +185,13 @@ class GhostTransform:
             print(j)
             norm = simps(simps(hermite**2, y), x)
             for i, ghost in enumerate(self.constructor.ghost_images):
-                    inner_product = simps(simps(hermite[484 : 516, 484 : 516] * ghost * np.exp(-x[484 : 516]**2 / 2), y[484 : 516] ), x[484 : 516])
+                    inner_product = simps(simps(hermite[484 : 516, 484 : 516] * ghost, y[484 : 516] ), x[484 : 516])
                     results[i, j] = inner_product / norm
                     # results[i, j] = np.dot(hermite.reshape(-1), ghost.reshape(-1)) / norm
-                    norms[j] = norm
+                    hermite_norms[j] = norm
+        
+        for i, ghost in enumerate(self.constructor.ghost_images):
+            ghost_norms[i] = simps(simps(ghost * ghost, y[484 : 516] ), x[484 : 516])
         
 
         print(np.square(results))
@@ -196,6 +199,9 @@ class GhostTransform:
         # np.set_printoptions(threshold=sys.maxsize)
         #print(np.argmax(np.square(results), 1))
         print(np.sum(np.square(results), axis = 1))
+        print(ghost_norms)
+
+        print(np.sum(np.square(results), axis = 1) / ghost_norms)
         
         # ghost = np.zeros((32, 32))
         # for i in range(hermite_constructor.hermite_functions.shape[0]):
@@ -220,7 +226,7 @@ if __name__ == '__main__':
     
     ghost_transform = GhostTransform(32)
     #ghost_transform.LoadRGBImagesFromTarfile(tar, files, (32, 32, 3), 10000)
-    ghost_transform.InitaliseGhosts(size_grid = 3, num_octants = 4, max_occurances = 2)
+    ghost_transform.InitaliseGhosts(size_grid = 3, num_octants = 4, max_occurances = 3)
     #print(ghost_transform.loader.gray_flattened.shape)
     
     # ghost_transform.HouseHolderQRDecomposition()
