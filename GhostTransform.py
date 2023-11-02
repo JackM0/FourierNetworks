@@ -29,8 +29,21 @@ class GhostTransform:
         """
         Initalise a set of ghosts to be used as the basis functions for the images fourier space
         """
-        self.constructor.CreateGhostsFrom2PSE(size_grid, num_octants, max_occurances)
-        print("Created Ghosts")
+        ghost_path = './ghost_image_arrays/'
+        ghost_file_name = 'ghosts_grid_' + str(size_grid) + 'octants_' + str(num_octants) + 'elementuses_' + str(max_occurances) + '.npy'
+        rf_file_name = 'rf_grid_' + str(size_grid) + 'octants_' + str(num_octants) + 'elementuses_' + str(max_occurances) + '.npy'
+
+        if not os.path.isfile(ghost_path + ghost_file_name):
+            self.constructor.CreateGhostsFrom2PSE(size_grid, num_octants, max_occurances)
+            np.save(ghost_path + ghost_file_name, self.constructor.ghost_images)
+            np.save(ghost_path + rf_file_name, self.constructor.receptive_field_images)
+            print("Created Ghosts")
+        else:
+            print("Loading Ghosts")
+            self.constructor.ghost_images = np.load(ghost_path + ghost_file_name)
+            self.constructor.receptive_field_images = np.load(ghost_path + rf_file_name)
+
+        
         return
         
     def HouseHolderQRDecomposition(self):
@@ -157,13 +170,13 @@ class GhostTransform:
         print(f"The Gram Matrix has a determinate of {linalg.det(self.gram)}")   
 
 
-    def  DecomposeHermite(self):
+    def  DecomposeHermite(self, hermite_order):
         hermite_constructor = HermiteConstructor()
 
         # Define the dimensions of the mask (e.g., 8x8)
         width, height = 1000, 1000
         # Specify the order and rotation angle of the Hermite functions
-        max_order = 5  # The maximum order number
+        max_order = hermite_order  # The maximum order number
 
         orders = []
 
@@ -182,26 +195,24 @@ class GhostTransform:
         y = np.linspace(-height / 8, height / 8, height)
         print(hermite_constructor.hermite_functions.shape[0])
         for j, hermite in enumerate(hermite_constructor.hermite_functions):
-            print(j)
+            # print(j)
             norm = simps(simps(hermite**2, y), x)
             for i, ghost in enumerate(self.constructor.ghost_images):
-                    inner_product = simps(simps(hermite[484 : 516, 484 : 516] * ghost, y[484 : 516] ), x[484 : 516])
+                    inner_product = simps(simps(hermite[484 : 516, 484 : 516] * np.real(ghost), y[484 : 516] ), x[484 : 516])
                     results[i, j] = inner_product / norm
                     # results[i, j] = np.dot(hermite.reshape(-1), ghost.reshape(-1)) / norm
-                    hermite_norms[j] = norm
+            hermite_norms[j] = norm
         
         for i, ghost in enumerate(self.constructor.ghost_images):
-            ghost_norms[i] = simps(simps(ghost * ghost, y[484 : 516] ), x[484 : 516])
-        
+            ghost_norms[i] = simps(simps(np.real(ghost)**2, y[484 : 516] ), x[484 : 516])
 
-        print(np.square(results))
-        #print(norms)
         # np.set_printoptions(threshold=sys.maxsize)
         #print(np.argmax(np.square(results), 1))
-        print(np.sum(np.square(results), axis = 1))
-        print(ghost_norms)
 
-        print(np.sum(np.square(results), axis = 1) / ghost_norms)
+        # print(np.sum(np.square(results) * hermite_norms, axis = 1))
+        # print(ghost_norms)
+
+        print(np.sum(np.square(results) * hermite_norms, axis = 1) / ghost_norms)
         
         # ghost = np.zeros((32, 32))
         # for i in range(hermite_constructor.hermite_functions.shape[0]):
@@ -226,7 +237,7 @@ if __name__ == '__main__':
     
     ghost_transform = GhostTransform(32)
     #ghost_transform.LoadRGBImagesFromTarfile(tar, files, (32, 32, 3), 10000)
-    ghost_transform.InitaliseGhosts(size_grid = 3, num_octants = 4, max_occurances = 3)
+    ghost_transform.InitaliseGhosts(size_grid = 3, num_octants = 4, max_occurances = 2)
     #print(ghost_transform.loader.gray_flattened.shape)
     
     # ghost_transform.HouseHolderQRDecomposition()
@@ -268,7 +279,7 @@ if __name__ == '__main__':
     # ghost_transform.SaveAllImages(np.real(ghost_transform.RF_basis_images_fft), "rf_fft_real_")
     # ghost_transform.SaveAllImages(np.imag(ghost_transform.RF_basis_images_fft), "rf_fft_imag_")
 
-    ghost_transform.DecomposeHermite()
+    ghost_transform.DecomposeHermite(15)
 
 
     #ghost_transform.ConstructGramMatrix(ghost_transform.basis_images)

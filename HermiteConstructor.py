@@ -5,6 +5,8 @@ from scipy.special import hermitenorm
 from scipy.special import hermite
 from scipy.integrate import simps
 
+import os
+
 class HermiteConstructor:
     """
     Class with functions to create 2D Hermite Functions
@@ -17,22 +19,29 @@ class HermiteConstructor:
         self.height = height
         self.num_functions = len(orders)
         self.hermite_functions = np.zeros((self.num_functions, width, height))
-
+        
+        hermite_array_path = './hermite_arrays/'
         for i in range(self.num_functions):
             n_order = orders[i][0]
             m_order = orders[i][1]
-            self.hermite_functions[i, :, :] = self.CreateCheckerHermite(width, height, n_order, m_order, rotation_angle_degrees)   
+            hermite_filename = 'hermite_width' + str(width) + 'height_' + str(height) + 'n_' + str(n_order) + 'm_' + str(m_order) + 'angle_' + str(rotation_angle_degrees) + 'npy'
+
+            if not os.path.isfile(hermite_array_path + hermite_filename):
+                self.hermite_functions[i, :, :] = self.CreateCheckerHermite(width, height, n_order, m_order, rotation_angle_degrees)   
+                np.save(hermite_array_path + hermite_filename, self.hermite_functions[i, :, :])
+            else:
+                self.hermite_functions[i, :, :] = np.load(hermite_array_path + hermite_filename)
         
-        x = np.linspace(-width / 8, width / 8, width)
-        y = np.linspace(-height / 8, height / 8, height)
+        # x = np.linspace(-width / 8, width / 8, width)
+        # y = np.linspace(-height / 8, height / 8, height)
         
-        for hermite in self.hermite_functions:
-            for hermite2 in self.hermite_functions:
-                integral = np.abs(simps(simps(hermite * hermite2 , y), x))
-                if np.isclose(integral, 1.0, atol=1e-3) or np.isclose(integral, 0, atol=1e-3):
-                    pass
-                else:
-                    print(integral)
+        # for hermite in self.hermite_functions:
+        #     for hermite2 in self.hermite_functions:
+        #         integral = np.abs(simps(simps(hermite * hermite2 , y), x))
+        #         if np.isclose(integral, 1.0, atol=1e-3) or np.isclose(integral, 0, atol=1e-3):
+        #             pass
+        #         else:
+        #             print(integral)
     
     def CreateCheckerHermite(self, width, height, n_order, m_order, rotation_angle_degrees):
         # Create the alternating +1 and -1 mask
