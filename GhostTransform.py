@@ -170,37 +170,28 @@ class GhostTransform:
         print(f"The Gram Matrix has a determinate of {linalg.det(self.gram)}")   
 
 
-    def  DecomposeHermite(self, hermite_order):
+    def DecomposeHermite(self, hermite_order):
         hermite_constructor = HermiteConstructor()
-
         # Define the dimensions of the mask (e.g., 8x8)
         width, height = 1000, 1000
-        # Specify the order and rotation angle of the Hermite functions
-        max_order = hermite_order  # The maximum order number
-
-        orders = []
-
-        for i in range(max_order + 1):
-            for j in range(max_order + 1):
-                orders.append((i, j))
-        orders =  sorted(orders, key=lambda pair: pair[0] + pair[1])
         rotation_angle_degrees = 45  # Change the angle as desired
+        hermite_constructor.CreateHermiteOfMaxOrder(width, height, hermite_order, rotation_angle_degrees)
 
-        hermite_constructor.CreateHermiteSet(width, height, orders, rotation_angle_degrees)
-
-        results = np.zeros((self.constructor.ghost_images.shape[0], hermite_constructor.hermite_functions.shape[0]))
+        coefficients = np.zeros((self.constructor.ghost_images.shape[0], hermite_constructor.hermite_functions.shape[0]))
         hermite_norms = np.zeros(hermite_constructor.hermite_functions.shape[0])
         ghost_norms = np.zeros(self.constructor.ghost_images.shape[0])
+        print(hermite_constructor.hermite_functions.shape[0])
+        
         x = np.linspace(-width / 8, width / 8, width)
         y = np.linspace(-height / 8, height / 8, height)
-        print(hermite_constructor.hermite_functions.shape[0])
+        
         for j, hermite in enumerate(hermite_constructor.hermite_functions):
-            # print(j)
+            print(j)
             norm = simps(simps(hermite**2, y), x)
             for i, ghost in enumerate(self.constructor.ghost_images):
                     inner_product = simps(simps(hermite[484 : 516, 484 : 516] * np.real(ghost), y[484 : 516] ), x[484 : 516])
-                    results[i, j] = inner_product / norm
-                    # results[i, j] = np.dot(hermite.reshape(-1), ghost.reshape(-1)) / norm
+                    coefficients[i, j] = inner_product / norm
+
             hermite_norms[j] = norm
         
         for i, ghost in enumerate(self.constructor.ghost_images):
@@ -211,19 +202,38 @@ class GhostTransform:
 
         # print(np.sum(np.square(results) * hermite_norms, axis = 1))
         # print(ghost_norms)
+        
+        # compression = np.sum(np.square(coefficients) * hermite_norms, axis = 1) / ghost_norms
+        # print(np.sum(np.square(coefficients) * hermite_norms, axis = 1) / ghost_norms)
+        
+        reconstructed_ghosts = np.zeros((self.constructor.ghost_images.shape[0], 32, 32))
+        for i, ghost in enumerate(reconstructed_ghosts):
+            print(i)
+            for j, hermite_function in enumerate(hermite_constructor.hermite_functions):
+                ghost += hermite_function[484 : 516, 484 : 516] * coefficients[i, j]
+        
+        location = './hermite_recon_' + 'order_' + str(hermite_order)
+        if(not os.path.exists(location)):
+            os.makedirs(location)
 
-        print(np.sum(np.square(results) * hermite_norms, axis = 1) / ghost_norms)
-        
-        # ghost = np.zeros((32, 32))
-        # for i in range(hermite_constructor.hermite_functions.shape[0]):
-        #     ghost += hermite_constructor.hermite_functions[i, 484 : 516, 484 : 516] * results[3, i]
-        
-        # plt.imshow(self.constructor.ghost_images[3], cmap=plt.cm.bone)
-        # plt.show()
-        
-        # plt.imshow(ghost, cmap=plt.cm.bone)
-        # plt.show()
+        name_prefix = 'reconstructed_ghosts'
+        for i in range(2):
+            images_to_display = np.arange(0 + i * 64, (i + 1) * 64, 1, dtype=int)
+            self.DisplayImages(reconstructed_ghosts, images_to_display, display = False).savefig(location + '/' + name_prefix + str(i) + '.png')
+            plt.close()
             
+        name_prefix = 'original_ghosts'
+        for i in range(2):
+            images_to_display = np.arange(0 + i * 64, (i + 1) * 64, 1, dtype=int)
+            self.DisplayImages(self.constructor.ghost_images, images_to_display, display = False).savefig(location + '/' + name_prefix + str(i) + '.png')
+            plt.close()
+        
+        name_prefix = 'hermite_functions'
+        for i in range(2):
+            images_to_display = np.arange(0 + i * 64, (i + 1) * 64, 1, dtype=int)
+            self.DisplayImages(hermite_constructor.hermite_functions[:, 484 : 516, 484 : 516], images_to_display, display = False).savefig(location + '/' + name_prefix + str(i) + '.png')
+            plt.close()
+        
 
 if __name__ == '__main__':
     tar = 'cifar-10-binary.tar.gz'
@@ -244,7 +254,7 @@ if __name__ == '__main__':
 
     # images_to_display = np.arange(0, 64, 1, dtype=int)
     # # images_to_display = np.arange(0, 1024, 16, dtype=int)
-    # ghost_transform.DisplayImages(ghost_transform.basis_images, images_to_display)
+    # # ghost_transform.DisplayImages(ghost_transform.ghost_basis_images, images_to_display)
     # ghost_transform.SaveAllImages(ghost_transform.ghost_basis_images, 'ghosts_')
     # ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images), 'ghosts_abs_')
 
@@ -279,7 +289,7 @@ if __name__ == '__main__':
     # ghost_transform.SaveAllImages(np.real(ghost_transform.RF_basis_images_fft), "rf_fft_real_")
     # ghost_transform.SaveAllImages(np.imag(ghost_transform.RF_basis_images_fft), "rf_fft_imag_")
 
-    ghost_transform.DecomposeHermite(15)
+    ghost_transform.DecomposeHermite(20)
 
 
     #ghost_transform.ConstructGramMatrix(ghost_transform.basis_images)

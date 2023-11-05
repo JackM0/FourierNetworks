@@ -14,6 +14,22 @@ class HermiteConstructor:
     def init(self):
         return
     
+    def CreateHermiteOfMaxOrder(self, width, height, max_order, rotation_angle_degrees):
+        # Define the dimensions of the mask (e.g., 8x8)
+        width, height = 1000, 1000
+        # Specify the order and rotation angle of the Hermite functions
+        max_order = max_order  # The maximum order number
+
+        orders = []
+
+        for i in range(max_order + 1):
+            for j in range(max_order + 1):
+                orders.append((i, j))
+        orders =  sorted(orders, key=lambda pair: pair[0] + pair[1])
+        rotation_angle_degrees = 45  # Change the angle as desired
+        
+        self.CreateHermiteSet(width, height, orders, rotation_angle_degrees)
+    
     def CreateHermiteSet(self, width, height, orders, rotation_angle_degrees):  
         self.width = width
         self.height = height
@@ -50,8 +66,8 @@ class HermiteConstructor:
         mask[::2, 1::2] = -1
 
         # Define the grid of the Hermite function
-        x = np.linspace(-width / 8, width / 8, width)
-        y = np.linspace(-height / 8, height / 8, height)
+        x = np.linspace(-width / 5, width / 5, width)
+        y = np.linspace(-height / 5, height / 5, height)
         X, Y = np.meshgrid(x, y)
 
         # Generate the rotated 2D Hermite function
