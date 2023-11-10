@@ -43,7 +43,6 @@ class GhostTransform:
             self.constructor.ghost_images = np.load(ghost_path + ghost_file_name)
             self.constructor.receptive_field_images = np.load(ghost_path + rf_file_name)
 
-        
         return
         
     def HouseHolderQRDecomposition(self):
@@ -56,59 +55,21 @@ class GhostTransform:
         ghost_matrix = self.constructor.ghost_images.reshape((-1, self.N * self.N)).T
         Q, R, P = linalg.qr(ghost_matrix, pivoting=True)
         self.ghost_basis_images = Q.T.reshape((-1, self.N, self.N))
-
+        
 
         self.ghost_basis_images_ifft = np.zeros(self.ghost_basis_images.shape, dtype=np.complex_)
         self.ghost_basis_images_fft = np.zeros(self.ghost_basis_images.shape, dtype=np.complex_)
         self.ghost_basis_images_noshift_ifft = np.zeros(self.ghost_basis_images.shape, dtype=np.complex_)
         self.ghost_basis_images_noshift_fft = np.zeros(self.ghost_basis_images.shape, dtype=np.complex_)
-
         for i, image in enumerate(self.ghost_basis_images):
             self.ghost_basis_images_fft[i, :, :] = np.fft.fftshift(np.fft.fft2((image)))
             self.ghost_basis_images_ifft[i, :, :] = np.fft.ifft2(np.fft.ifftshift((image)))
             self.ghost_basis_images_noshift_ifft[i, :, :] = np.fft.ifft2(image)
             self.ghost_basis_images_noshift_fft[i, :, :] = np.fft.fft2(image)
-
+            
         self.RF_basis_images_fft = np.zeros(self.ghost_basis_images.shape, dtype=np.complex_)
-
         for i, image in enumerate(self.RF_basis_images):
             self.RF_basis_images_fft[i, :, :] = np.fft.fftshift(np.fft.fft2((image)))
-        
-        # print(images.shape)
-        # [m,n] = images.shape
-        # Q = np.eye(m)
-        # R = images.copy()
-
-        # for j in range(n):
-        #     print(j)
-        #     max_index = np.argmax(np.abs(R[j:, j])) + j
-        #     print(max_index)
-        #     if max_index != j:
-        #         # Swap columns in both R and Q to make R[j,j] the largest element
-        #         R[[j, max_index], :] = R[[max_index, j], :]
-        #         Q[[j, max_index], :] = Q[[max_index, j], :]
-                
-                
-        #     normx = np.sqrt(np.dot(R[j:, j], R[j:, j]))
-        #     print(normx)
-        #     s = -np.sign(R[j,j])
-        #     print(s, R[j,j])
-        #     u1 = R[j,j] - s * normx
-        #     print(u1)
-        #     w = (R[j:, j] / u1).reshape((-1, 1))
-        #     #print(w)
-        #     #print(w)
-        #     w[0] = 1
-        #     tau = -s * u1 / normx
-        #     #print(tau.shape)
-        #     #print('testmg')
-        #     step1 = w.T @ R[j:, :]
-        #     step2 = (tau * w)
-        #     #print(step1.shape)
-        #     #print(step2.shape)
-
-        #     R[j:, :] = R[j:, :] - (tau * w) @ (w.T @ R[j:, :])
-        #     Q[:, j:] = Q[:, j:] - (Q[:, j :] @ w) @ (tau * w).T
 
     def DisplayImages(self, images, images_to_display, display):
         num_images = len(images_to_display)
@@ -124,22 +85,21 @@ class GhostTransform:
 
         return fig
 
-    def SaveAllImages(self, images, name_prefix):
-        location = './ghost_transform_3_basis_2repeats'
-
+    def SaveAllImages(self, images, name_prefix, location):
         if(not os.path.exists(location)):
             os.makedirs(location)
 
+        num_images = images.shape[0]
         for i in range(2):
             images_to_display = np.arange(0 + i * 64, (i + 1) * 64, 1, dtype=int)
             self.DisplayImages(images, images_to_display, display = False).savefig(location + '/' + name_prefix + str(i) + '.png')
             plt.close()
-        
-    
+            if (num_images < 64 * 2):
+                break
     
     def LinearDecompositionGhosts(self):
         '''
-        Perform a linear recomposition of PCA components with the ghosts
+        Perform a linear decomposition of PCA components with the ghosts
         ''' 
         self.separator = SourceSeparator()
         self.separator.PerformTransform(self.loader.fftmag, len(self.loader.fftmag))
@@ -169,33 +129,40 @@ class GhostTransform:
                 
         print(f"The Gram Matrix has a determinate of {linalg.det(self.gram)}")   
 
-
-    def DecomposeHermite(self, hermite_order):
+    def DecomposeImages(self, hermite_order, images_to_decompose, results_directory):    
         hermite_constructor = HermiteConstructor()
         # Define the dimensions of the mask (e.g., 8x8)
         width, height = 1000, 1000
         rotation_angle_degrees = 45  # Change the angle as desired
         hermite_constructor.CreateHermiteOfMaxOrder(width, height, hermite_order, rotation_angle_degrees)
+        
+        if(not os.path.exists(results_directory)):
+            os.makedirs(results_directory)
+            
+        if not os.path.isfile(results_directory + '/coefficients.npy'):
+            coefficients = np.zeros((images_to_decompose.shape[0], hermite_constructor.hermite_functions.shape[0]))
+            hermite_norms = np.zeros(hermite_constructor.hermite_functions.shape[0])
+            image_norms = np.zeros(images_to_decompose.shape[0])
+            print(hermite_constructor.hermite_functions.shape[0])
+            
+            x = np.linspace(-width / 8, width / 8, width)
+            y = np.linspace(-height / 8, height / 8, height)
+            
+            for j, hermite in enumerate(hermite_constructor.hermite_functions):
+                print(j)
+                norm = simps(simps(hermite**2, y), x)
+                for i, image in enumerate(images_to_decompose):
+                        inner_product = simps(simps(hermite[484 : 516, 484 : 516] * np.real(image), y[484 : 516] ), x[484 : 516])
+                        coefficients[i, j] = inner_product / norm
 
-        coefficients = np.zeros((self.constructor.ghost_images.shape[0], hermite_constructor.hermite_functions.shape[0]))
-        hermite_norms = np.zeros(hermite_constructor.hermite_functions.shape[0])
-        ghost_norms = np.zeros(self.constructor.ghost_images.shape[0])
-        print(hermite_constructor.hermite_functions.shape[0])
-        
-        x = np.linspace(-width / 8, width / 8, width)
-        y = np.linspace(-height / 8, height / 8, height)
-        
-        for j, hermite in enumerate(hermite_constructor.hermite_functions):
-            print(j)
-            norm = simps(simps(hermite**2, y), x)
-            for i, ghost in enumerate(self.constructor.ghost_images):
-                    inner_product = simps(simps(hermite[484 : 516, 484 : 516] * np.real(ghost), y[484 : 516] ), x[484 : 516])
-                    coefficients[i, j] = inner_product / norm
-
-            hermite_norms[j] = norm
-        
-        for i, ghost in enumerate(self.constructor.ghost_images):
-            ghost_norms[i] = simps(simps(np.real(ghost)**2, y[484 : 516] ), x[484 : 516])
+                hermite_norms[j] = norm
+            
+            for i, image in enumerate(images_to_decompose):
+                image_norms[i] = simps(simps(np.real(image)**2, y[484 : 516] ), x[484 : 516])
+            np.save(results_directory + '/coefficients.npy', coefficients)
+        else:
+            print("Loading Coefficients")
+            coefficients = np.load(results_directory + '/coefficients.npy')
 
         # np.set_printoptions(threshold=sys.maxsize)
         #print(np.argmax(np.square(results), 1))
@@ -206,35 +173,24 @@ class GhostTransform:
         # compression = np.sum(np.square(coefficients) * hermite_norms, axis = 1) / ghost_norms
         # print(np.sum(np.square(coefficients) * hermite_norms, axis = 1) / ghost_norms)
         
-        reconstructed_ghosts = np.zeros((self.constructor.ghost_images.shape[0], 32, 32))
-        for i, ghost in enumerate(reconstructed_ghosts):
+        compression = np.sum(np.square(coefficients), axis = 0)
+        args = np.flip(np.argsort(compression))
+        
+        plt.plot(np.flip(np.sort(compression)))
+        plt.show()
+        
+        reconstructed_images = np.zeros((images_to_decompose.shape[0], 32, 32))
+        for i, image in enumerate(reconstructed_images):
             print(i)
-            for j, hermite_function in enumerate(hermite_constructor.hermite_functions):
-                ghost += hermite_function[484 : 516, 484 : 516] * coefficients[i, j]
+            for k, j in enumerate(args): #enumerate(hermite_constructor.hermite_functions):
+                image += hermite_constructor.hermite_functions[j, 484 : 516, 484 : 516] * coefficients[i, j]
+                if k > 300:
+                    break
         
-        location = './hermite_recon_' + 'order_' + str(hermite_order)
-        if(not os.path.exists(location)):
-            os.makedirs(location)
-
-        name_prefix = 'reconstructed_ghosts'
-        for i in range(2):
-            images_to_display = np.arange(0 + i * 64, (i + 1) * 64, 1, dtype=int)
-            self.DisplayImages(reconstructed_ghosts, images_to_display, display = False).savefig(location + '/' + name_prefix + str(i) + '.png')
-            plt.close()
+        self.SaveAllImages(reconstructed_images, 'reconstructed', results_directory)
+        self.SaveAllImages(np.real(images_to_decompose), 'original', results_directory)
+        self.SaveAllImages(hermite_constructor.hermite_functions[:, 484 : 516, 484 : 516], 'hermite_functions', results_directory)
             
-        name_prefix = 'original_ghosts'
-        for i in range(2):
-            images_to_display = np.arange(0 + i * 64, (i + 1) * 64, 1, dtype=int)
-            self.DisplayImages(self.constructor.ghost_images, images_to_display, display = False).savefig(location + '/' + name_prefix + str(i) + '.png')
-            plt.close()
-        
-        name_prefix = 'hermite_functions'
-        for i in range(2):
-            images_to_display = np.arange(0 + i * 64, (i + 1) * 64, 1, dtype=int)
-            self.DisplayImages(hermite_constructor.hermite_functions[:, 484 : 516, 484 : 516], images_to_display, display = False).savefig(location + '/' + name_prefix + str(i) + '.png')
-            plt.close()
-        
-
 if __name__ == '__main__':
     tar = 'cifar-10-binary.tar.gz'
     files = ['cifar-10-batches-bin/data_batch_1.bin',
@@ -250,47 +206,50 @@ if __name__ == '__main__':
     ghost_transform.InitaliseGhosts(size_grid = 3, num_octants = 4, max_occurances = 2)
     #print(ghost_transform.loader.gray_flattened.shape)
     
-    # ghost_transform.HouseHolderQRDecomposition()
+    ghost_transform.HouseHolderQRDecomposition()
 
     # images_to_display = np.arange(0, 64, 1, dtype=int)
     # # images_to_display = np.arange(0, 1024, 16, dtype=int)
     # # ghost_transform.DisplayImages(ghost_transform.ghost_basis_images, images_to_display)
-    # ghost_transform.SaveAllImages(ghost_transform.ghost_basis_images, 'ghosts_')
-    # ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images), 'ghosts_abs_')
+    
+    # location = './ghost_transform_3_basis_2repeats'
+    # ghost_transform.SaveAllImages(ghost_transform.ghost_basis_images, 'ghosts_', location)
+    # ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images), 'ghosts_abs_', location)
 
-    # ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images_ifft), "ghosts_ifft_abs_")
-    # ghost_transform.SaveAllImages(np.angle(ghost_transform.ghost_basis_images_ifft), "ghosts_ifft_angle_")
-    # ghost_transform.SaveAllImages(np.real(ghost_transform.ghost_basis_images_ifft), "ghosts_ifft_real_")
-    # ghost_transform.SaveAllImages(np.imag(ghost_transform.ghost_basis_images_ifft), "ghosts_ifft_imag_")
+    # ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images_ifft), "ghosts_ifft_abs_", location)
+    # ghost_transform.SaveAllImages(np.angle(ghost_transform.ghost_basis_images_ifft), "ghosts_ifft_angle_", location)
+    # ghost_transform.SaveAllImages(np.real(ghost_transform.ghost_basis_images_ifft), "ghosts_ifft_real_", location)
+    # ghost_transform.SaveAllImages(np.imag(ghost_transform.ghost_basis_images_ifft), "ghosts_ifft_imag_", location)
     
-    # ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images_fft), "ghosts_fft_abs_")
-    # ghost_transform.SaveAllImages(np.angle(ghost_transform.ghost_basis_images_fft), "ghosts_fft_angle_")
-    # ghost_transform.SaveAllImages(np.real(ghost_transform.ghost_basis_images_fft), "ghosts_fft_real_")
-    # ghost_transform.SaveAllImages(np.imag(ghost_transform.ghost_basis_images_fft), "ghosts_fft_imag_")
+    # ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images_fft), "ghosts_fft_abs_", location)
+    # ghost_transform.SaveAllImages(np.angle(ghost_transform.ghost_basis_images_fft), "ghosts_fft_angle_", location)
+    # ghost_transform.SaveAllImages(np.real(ghost_transform.ghost_basis_images_fft), "ghosts_fft_real_", location)
+    # ghost_transform.SaveAllImages(np.imag(ghost_transform.ghost_basis_images_fft), "ghosts_fft_imag_", location)
     
-    # ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images_noshift_fft), "ghosts_noshift_fft_abs_")
-    # ghost_transform.SaveAllImages(np.angle(ghost_transform.ghost_basis_images_noshift_fft), "ghosts_noshift_fft_angle_")
-    # ghost_transform.SaveAllImages(np.real(ghost_transform.ghost_basis_images_noshift_fft), "ghosts_noshift_fft_real_")
-    # ghost_transform.SaveAllImages(np.imag(ghost_transform.ghost_basis_images_noshift_fft), "ghosts_noshift_fft_imag_")
+    # ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images_noshift_fft), "ghosts_noshift_fft_abs_", location)
+    # ghost_transform.SaveAllImages(np.angle(ghost_transform.ghost_basis_images_noshift_fft), "ghosts_noshift_fft_angle_", location)
+    # ghost_transform.SaveAllImages(np.real(ghost_transform.ghost_basis_images_noshift_fft), "ghosts_noshift_fft_real_", location)
+    # ghost_transform.SaveAllImages(np.imag(ghost_transform.ghost_basis_images_noshift_fft), "ghosts_noshift_fft_imag_", location)
     
-    # ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images_noshift_ifft), "ghosts_noshift_ifft_abs_")
-    # ghost_transform.SaveAllImages(np.angle(ghost_transform.ghost_basis_images_noshift_ifft), "ghosts_noshift_ifft_angle_")
-    # ghost_transform.SaveAllImages(np.real(ghost_transform.ghost_basis_images_noshift_ifft), "ghosts_noshift_ifft_real_")
-    # ghost_transform.SaveAllImages(np.imag(ghost_transform.ghost_basis_images_noshift_ifft), "ghosts_noshift_ifft_imag_")
+    # ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images_noshift_ifft), "ghosts_noshift_ifft_abs_", location)
+    # ghost_transform.SaveAllImages(np.angle(ghost_transform.ghost_basis_images_noshift_ifft), "ghosts_noshift_ifft_angle_", location)
+    # ghost_transform.SaveAllImages(np.real(ghost_transform.ghost_basis_images_noshift_ifft), "ghosts_noshift_ifft_real_", location)
+    # ghost_transform.SaveAllImages(np.imag(ghost_transform.ghost_basis_images_noshift_ifft), "ghosts_noshift_ifft_imag_", location)
 
         
-    # ghost_transform.SaveAllImages(np.abs(ghost_transform.RF_basis_images), "rf_abs_")
-    # ghost_transform.SaveAllImages(np.angle(ghost_transform.RF_basis_images), "rf_phase_")
-    # ghost_transform.SaveAllImages(np.real(ghost_transform.RF_basis_images), "rf_real_")
-    # ghost_transform.SaveAllImages(np.imag(ghost_transform.RF_basis_images), "rf_imag_")
+    # ghost_transform.SaveAllImages(np.abs(ghost_transform.RF_basis_images), "rf_abs_", location)
+    # ghost_transform.SaveAllImages(np.angle(ghost_transform.RF_basis_images), "rf_phase_", location)
+    # ghost_transform.SaveAllImages(np.real(ghost_transform.RF_basis_images), "rf_real_", location)
+    # ghost_transform.SaveAllImages(np.imag(ghost_transform.RF_basis_images), "rf_imag_", location)
 
-    # ghost_transform.SaveAllImages(np.abs(ghost_transform.RF_basis_images_fft), "rf_fft_abs_")
-    # ghost_transform.SaveAllImages(np.angle(ghost_transform.RF_basis_images_fft), "rf_fft_phase_")
-    # ghost_transform.SaveAllImages(np.real(ghost_transform.RF_basis_images_fft), "rf_fft_real_")
-    # ghost_transform.SaveAllImages(np.imag(ghost_transform.RF_basis_images_fft), "rf_fft_imag_")
+    # ghost_transform.SaveAllImages(np.abs(ghost_transform.RF_basis_images_fft), "rf_fft_abs_", location)
+    # ghost_transform.SaveAllImages(np.angle(ghost_transform.RF_basis_images_fft), "rf_fft_phase_", location)
+    # ghost_transform.SaveAllImages(np.real(ghost_transform.RF_basis_images_fft), "rf_fft_real_", location)
+    # ghost_transform.SaveAllImages(np.imag(ghost_transform.RF_basis_images_fft), "rf_fft_imag_", location)
 
-    ghost_transform.DecomposeHermite(20)
-
+    hermite_order = 25
+    # ghost_transform.DecomposeGhosts(10, ghost_transform.constructor.ghost_images)
+    ghost_transform.DecomposeImages(hermite_order, ghost_transform.constructor.receptive_field_images, './rf_recon_' + 'order_' + str(hermite_order))
 
     #ghost_transform.ConstructGramMatrix(ghost_transform.basis_images)
     #ghost_transform.LinearDecompositionGhosts()
