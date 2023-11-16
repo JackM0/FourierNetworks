@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import sys
 import os 
 from scipy.integrate import simps
+from sklearn.decomposition import PCA
 
 class GhostTransform:
     """
@@ -173,23 +174,44 @@ class GhostTransform:
         # compression = np.sum(np.square(coefficients) * hermite_norms, axis = 1) / ghost_norms
         # print(np.sum(np.square(coefficients) * hermite_norms, axis = 1) / ghost_norms)
         
-        compression = np.sum(np.square(coefficients), axis = 0)
-        args = np.flip(np.argsort(compression))
+        # compression = np.sum(np.square(coefficients), axis = 0)
+        # args = np.flip(np.argsort(compression))
         
-        plt.plot(np.flip(np.sort(compression)))
-        plt.show()
+        # plt.plot(np.flip(np.sort(compression)))
+        # plt.show()
+
+        
+        args = self.EnergyHermiteCoefficients(coefficients)
         
         reconstructed_images = np.zeros((images_to_decompose.shape[0], 32, 32))
         for i, image in enumerate(reconstructed_images):
-            print(i)
+            #print(i)
             for k, j in enumerate(args): #enumerate(hermite_constructor.hermite_functions):
                 image += hermite_constructor.hermite_functions[j, 484 : 516, 484 : 516] * coefficients[i, j]
-                if k > 300:
-                    break
         
         self.SaveAllImages(reconstructed_images, 'reconstructed', results_directory)
         self.SaveAllImages(np.real(images_to_decompose), 'original', results_directory)
         self.SaveAllImages(hermite_constructor.hermite_functions[:, 484 : 516, 484 : 516], 'hermite_functions', results_directory)
+
+        
+
+    def EnergyHermiteCoefficients(self, coefficient_matrix):
+        variance_per_basis = np.var(coefficient_matrix, axis=0)
+        args = np.flip(np.argsort(variance_per_basis))
+        
+        cumulative_variance = np.cumsum(variance_per_basis[args]) / np.sum(variance_per_basis)
+        plt.plot(cumulative_variance, marker='o')
+        plt.xlabel('Basis Vectors')
+        plt.ylabel('Cumulative Variance')
+        plt.title('Variance Energy Analysis')
+        plt.show()
+
+
+        for i in range(len(args)):
+            if cumulative_variance[i] > 0.95:
+                break
+        print(i)
+        return args[:i]
             
 if __name__ == '__main__':
     tar = 'cifar-10-binary.tar.gz'
@@ -247,7 +269,7 @@ if __name__ == '__main__':
     # ghost_transform.SaveAllImages(np.real(ghost_transform.RF_basis_images_fft), "rf_fft_real_", location)
     # ghost_transform.SaveAllImages(np.imag(ghost_transform.RF_basis_images_fft), "rf_fft_imag_", location)
 
-    hermite_order = 25
+    hermite_order = 40
     # ghost_transform.DecomposeGhosts(10, ghost_transform.constructor.ghost_images)
     ghost_transform.DecomposeImages(hermite_order, ghost_transform.constructor.receptive_field_images, './rf_recon_' + 'order_' + str(hermite_order))
 

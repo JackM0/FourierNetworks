@@ -40,7 +40,7 @@ class HermiteConstructor:
         for i in range(self.num_functions):
             n_order = orders[i][0]
             m_order = orders[i][1]
-            hermite_filename = 'hermite_width' + str(width) + 'height_' + str(height) + 'n_' + str(n_order) + 'm_' + str(m_order) + 'angle_' + str(rotation_angle_degrees) + 'npy'
+            hermite_filename = 'hermite_width' + str(width) + 'height_' + str(height) + 'n_' + str(n_order) + 'm_' + str(m_order) + 'angle_' + str(rotation_angle_degrees) + '.npy'
 
             if not os.path.isfile(hermite_array_path + hermite_filename):
                 self.hermite_functions[i, :, :] = self.CreateCheckerHermite(width, height, n_order, m_order, rotation_angle_degrees)   
@@ -72,7 +72,7 @@ class HermiteConstructor:
 
         # Generate the rotated 2D Hermite function
         hermite_function = self.Hermite2D(X, Y, n_order, m_order, rotation_angle_degrees)
-        checker_hermite = hermite_function * mask
+        checker_hermite = hermite_function #*mask
         #print(simps(simps(checker_hermite**2, y), x))
         return checker_hermite
     
