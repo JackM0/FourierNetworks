@@ -135,7 +135,8 @@ class GhostTransform:
         # Define the dimensions of the mask (e.g., 8x8)
         width, height = 1000, 1000
         rotation_angle_degrees = 45  # Change the angle as desired
-        hermite_constructor.CreateHermiteOfMaxOrder(width, height, hermite_order, rotation_angle_degrees)
+        sizes = [5, 10, 15]
+        hermite_constructor.CreateHermiteOfMaxOrder(width, height, hermite_order, rotation_angle_degrees, sizes)
         
         if(not os.path.exists(results_directory)):
             os.makedirs(results_directory)
@@ -144,13 +145,16 @@ class GhostTransform:
             coefficients = np.zeros((images_to_decompose.shape[0], hermite_constructor.hermite_functions.shape[0]))
             hermite_norms = np.zeros(hermite_constructor.hermite_functions.shape[0])
             image_norms = np.zeros(images_to_decompose.shape[0])
-            print(hermite_constructor.hermite_functions.shape[0])
+            print(f"Projecting onto {hermite_constructor.hermite_functions.shape[0]} Hermite Functions")
             
-            x = np.linspace(-width / 8, width / 8, width)
-            y = np.linspace(-height / 8, height / 8, height)
+            
             
             for j, hermite in enumerate(hermite_constructor.hermite_functions):
-                print(j)
+                size = sizes[j % len(sizes)]
+                x = np.linspace(-width * (1/size), width * (1/size), width)
+                y = np.linspace(-height * (1/size), height * (1/size), height)
+                
+                print(f"Projecting onto Hermite {j}")
                 norm = simps(simps(hermite**2, y), x)
                 for i, image in enumerate(images_to_decompose):
                         inner_product = simps(simps(hermite[484 : 516, 484 : 516] * np.real(image), y[484 : 516] ), x[484 : 516])
@@ -188,7 +192,7 @@ class GhostTransform:
             #print(i)
             for k, j in enumerate(args): #enumerate(hermite_constructor.hermite_functions):
                 image += hermite_constructor.hermite_functions[j, 484 : 516, 484 : 516] * coefficients[i, j]
-        
+                
         self.SaveAllImages(reconstructed_images, 'reconstructed', results_directory)
         self.SaveAllImages(np.real(images_to_decompose), 'original', results_directory)
         self.SaveAllImages(hermite_constructor.hermite_functions[:, 484 : 516, 484 : 516], 'hermite_functions', results_directory)
@@ -208,7 +212,7 @@ class GhostTransform:
 
 
         for i in range(len(args)):
-            if cumulative_variance[i] > 0.95:
+            if cumulative_variance[i] > 0.8:
                 break
         print(i)
         return args[:i]
@@ -269,9 +273,9 @@ if __name__ == '__main__':
     # ghost_transform.SaveAllImages(np.real(ghost_transform.RF_basis_images_fft), "rf_fft_real_", location)
     # ghost_transform.SaveAllImages(np.imag(ghost_transform.RF_basis_images_fft), "rf_fft_imag_", location)
 
-    hermite_order = 40
+    hermite_order = 20
     # ghost_transform.DecomposeGhosts(10, ghost_transform.constructor.ghost_images)
-    ghost_transform.DecomposeImages(hermite_order, ghost_transform.constructor.receptive_field_images, './rf_recon_' + 'order_' + str(hermite_order))
+    ghost_transform.DecomposeImages(hermite_order, ghost_transform.constructor.receptive_field_images, './rf_recon_' + 'order_' + str(hermite_order) + '_3sizes')
 
     #ghost_transform.ConstructGramMatrix(ghost_transform.basis_images)
     #ghost_transform.LinearDecompositionGhosts()

@@ -14,7 +14,7 @@ class HermiteConstructor:
     def init(self):
         return
     
-    def CreateHermiteOfMaxOrder(self, width, height, max_order, rotation_angle_degrees):
+    def CreateHermiteOfMaxOrder(self, width, height, max_order, rotation_angle_degrees, sizes):
         # Define the dimensions of the mask (e.g., 8x8)
         width, height = 1000, 1000
         # Specify the order and rotation angle of the Hermite functions
@@ -28,25 +28,30 @@ class HermiteConstructor:
         orders =  sorted(orders, key=lambda pair: pair[0] + pair[1])
         rotation_angle_degrees = 45  # Change the angle as desired
         
-        self.CreateHermiteSet(width, height, orders, rotation_angle_degrees)
+        self.CreateHermiteSet(width, height, orders, rotation_angle_degrees, sizes)
     
-    def CreateHermiteSet(self, width, height, orders, rotation_angle_degrees):  
+    def CreateHermiteSet(self, width, height, orders, rotation_angle_degrees, sizes):  
         self.width = width
         self.height = height
-        self.num_functions = len(orders)
+        self.num_orders = len(orders)
+        self.num_sizes = len(sizes)
+        self.num_functions = self.num_orders * self.num_sizes
         self.hermite_functions = np.zeros((self.num_functions, width, height))
         
         hermite_array_path = './hermite_arrays/'
-        for i in range(self.num_functions):
+        print(f"Creating/Loading {self.num_functions} Hermite Functions")
+        for i in range(self.num_orders):
             n_order = orders[i][0]
             m_order = orders[i][1]
-            hermite_filename = 'hermite_width' + str(width) + 'height_' + str(height) + 'n_' + str(n_order) + 'm_' + str(m_order) + 'angle_' + str(rotation_angle_degrees) + '.npy'
-
-            if not os.path.isfile(hermite_array_path + hermite_filename):
-                self.hermite_functions[i, :, :] = self.CreateCheckerHermite(width, height, n_order, m_order, rotation_angle_degrees)   
-                np.save(hermite_array_path + hermite_filename, self.hermite_functions[i, :, :])
-            else:
-                self.hermite_functions[i, :, :] = np.load(hermite_array_path + hermite_filename)
+            for j in range(self.num_sizes):
+                print(f"Creating Hermite {j + i * self.num_sizes}")
+                size = sizes[j]
+                hermite_filename = 'hermite_width' + str(width) + 'height_' + str(height) + 'n_' + str(n_order) + 'm_' + str(m_order) + 'angle_' + str(rotation_angle_degrees) + 'size_' + str(size) + '.npy'
+                if not os.path.isfile(hermite_array_path + hermite_filename):
+                    self.hermite_functions[j + i * self.num_sizes, :, :] = self.CreateCheckerHermite(width, height, n_order, m_order, rotation_angle_degrees, size)   
+                    np.save(hermite_array_path + hermite_filename, self.hermite_functions[j + i * self.num_sizes, :, :])
+                else:
+                    self.hermite_functions[j + i * self.num_sizes, :, :] = np.load(hermite_array_path + hermite_filename)
         
         # x = np.linspace(-width / 8, width / 8, width)
         # y = np.linspace(-height / 8, height / 8, height)
@@ -59,15 +64,15 @@ class HermiteConstructor:
         #         else:
         #             print(integral)
     
-    def CreateCheckerHermite(self, width, height, n_order, m_order, rotation_angle_degrees):
+    def CreateCheckerHermite(self, width, height, n_order, m_order, rotation_angle_degrees, size):
         # Create the alternating +1 and -1 mask
         mask = np.ones((width, height), dtype=int)
         mask[1::2, ::2] = -1
         mask[::2, 1::2] = -1
 
         # Define the grid of the Hermite function
-        x = np.linspace(-width / 5, width / 5, width)
-        y = np.linspace(-height / 5, height / 5, height)
+        x = np.linspace(-width * (1/size), width * (1/size), width)
+        y = np.linspace(-height * (1/size), height * (1/size), height)
         X, Y = np.meshgrid(x, y)
 
         # Generate the rotated 2D Hermite function
@@ -110,7 +115,7 @@ if __name__ == '__main__':
     width, height = 1000, 1000
     # Specify the order and rotation angle of the Hermite functions
     max_order = 3  # The maximum order number
-
+    size = 5
     orders = []
 
     for i in range(max_order + 1):
@@ -120,7 +125,7 @@ if __name__ == '__main__':
     orders =  sorted(orders, key=lambda pair: pair[0] + pair[1])
     rotation_angle_degrees = 45  # Change the angle as desired
     print(orders)
-    hermite_constructor.CreateHermiteSet(width, height, orders, rotation_angle_degrees)
+    hermite_constructor.CreateHermiteSet(width, height, orders, rotation_angle_degrees, size)
     hermite_constructor.DisplayAllFunctions()
     
 
