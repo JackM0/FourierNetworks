@@ -52,6 +52,7 @@ class HermiteConstructor:
                     np.save(hermite_array_path + hermite_filename, self.hermite_functions[j + i * self.num_sizes, :, :])
                 else:
                     self.hermite_functions[j + i * self.num_sizes, :, :] = np.load(hermite_array_path + hermite_filename)
+                #self.hermite_functions[j + i * self.num_sizes, :, :] = self.CreateCheckerHermite(width, height, n_order, m_order, rotation_angle_degrees, size) 
         
         # x = np.linspace(-width / 8, width / 8, width)
         # y = np.linspace(-height / 8, height / 8, height)
@@ -100,12 +101,17 @@ class HermiteConstructor:
             return 2.0 * x * self.HermitePolynomial(n - 1, x) - 2.0 * (n - 1) * self.HermitePolynomial(n - 2, x)
         
     def DisplayAllFunctions(self):
-        fig=plt.figure(figsize=(32, 32))        
-        for i, image in enumerate(self.hermite_functions):
-            ax=fig.add_subplot(int(self.num_functions / 5) + 1, 5, i + 1)
-            ax.imshow(image[484 : 517, 484 : 517], cmap=plt.cm.bone)
+        for i in range(2):
+            images_to_display = np.arange(0 + i * 64, (i + 1) * 64, 1, dtype=int)
+            num_images = len(images_to_display)
+            display_rows_cols = int(num_images**0.5)
 
-        plt.show()
+            fig=plt.figure(figsize=(32, 32))          
+            for j, image_index in enumerate(images_to_display):
+                ax=fig.add_subplot(display_rows_cols, display_rows_cols, j+1)
+                ax.imshow(self.hermite_functions[image_index, 484 : 517, 484 : 517], cmap=plt.cm.bone)
+
+            plt.show()
 
 
 if __name__ == '__main__':
@@ -114,8 +120,8 @@ if __name__ == '__main__':
     # Define the dimensions of the mask (e.g., 8x8)
     width, height = 1000, 1000
     # Specify the order and rotation angle of the Hermite functions
-    max_order = 3  # The maximum order number
-    size = 5
+    max_order = 20  # The maximum order number
+    size = [5]
     orders = []
 
     for i in range(max_order + 1):
