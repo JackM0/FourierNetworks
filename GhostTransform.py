@@ -146,13 +146,13 @@ class GhostTransform:
         # Define the dimensions of the mask (e.g., 8x8)
         width, height = 1000, 1000
         rotation_angle_degrees = 45  # Change the angle as desired
-        sizes = [10]
+        sizes = [5]
         hermite_constructor.CreateHermiteOfMaxOrder(width, height, hermite_order, rotation_angle_degrees, sizes)
         
         if(not os.path.exists(results_directory)):
             os.makedirs(results_directory)
             
-        if not os.path.isfile(results_directory + '/coefficients.npy'):
+        if not os.path.isfile(results_directory + '/coefficients_' + str(sizes[0]) +'.npy'):
             coefficients = np.zeros((images_to_decompose.shape[0], hermite_constructor.hermite_functions.shape[0]))
             hermite_norms = np.zeros(hermite_constructor.hermite_functions.shape[0])
             image_norms = np.zeros(images_to_decompose.shape[0])
@@ -175,10 +175,10 @@ class GhostTransform:
             
             for i, image in enumerate(images_to_decompose):
                 image_norms[i] = simps(simps(np.real(image)**2, y[484 : 516] ), x[484 : 516])
-            np.save(results_directory + '/coefficients.npy', coefficients)
+            np.save(results_directory + '/coefficients_' + str(sizes[0]) +'.npy', coefficients)
         else:
             print("Loading Coefficients")
-            coefficients = np.load(results_directory + '/coefficients.npy')
+            coefficients = np.load(results_directory + '/coefficients_' + str(sizes[0]) +'.npy')
 
         # np.set_printoptions(threshold=sys.maxsize)
         #print(np.argmax(np.square(results), 1))
@@ -242,7 +242,7 @@ class GhostTransform:
 
 
         for i in range(len(args_power)):
-            if cumulative_power[i] > 0.9:
+            if cumulative_power[i] > 0.95:
                 break
         print(i)
         return args_power[:i]
