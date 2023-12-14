@@ -10,6 +10,7 @@ import sys
 import os 
 from scipy.integrate import simps
 from sklearn.decomposition import PCA
+from skimage.transform import radon, rescale, iradon
 
 class GhostTransform:
     """
@@ -82,6 +83,28 @@ class GhostTransform:
             self.fourierghost_basis_images_noshift_fft[i, :, :] = np.fft.fft2(image)
             self.fourierghost_basis_images_shiftedrow[i, :, :] = np.fft.fftshift(image, 0)
             self.fourierghost_basis_images_shiftedcol[i, :, :] = np.fft.fftshift(image, 1)
+
+    def QRWithRadonFlattening(self):
+        
+        theta = np.linspace(0., 180., max(self.constructor.ghost_images.shape[1:]), endpoint=False)
+        self.ghost_sinograms = np.zeros((self.constructor.ghost_images.shape))
+        print(self.constructor.ghost_images.shape)
+        for i, ghost in enumerate(self.constructor.ghost_images):
+            print(i)
+            self.ghost_sinograms[i] = radon(ghost, theta=theta)
+        
+
+        ghost_matrix = self.ghost_sinograms.reshape((-1, self.N * self.N)).T
+        Q, R, P = linalg.qr(ghost_matrix, pivoting=True)
+
+        self.sinogram_basis = Q.T.reshape((-1, self.N, self.N))
+
+        self.ghost_basis_images = np.zeros((Q.T.shape[0], self.N, self.N))
+        for j, basis_vector in enumerate(Q.T):
+            print(j)
+            self.ghost_basis_images[j] = iradon(basis_vector.reshape((self.N, self.N)), theta=theta, filter_name='ramp')
+
+        return
 
     def DisplayImages(self, images, images_to_display, display):
         num_images = len(images_to_display)
@@ -259,68 +282,76 @@ if __name__ == '__main__':
     
     ghost_transform = GhostTransform(32)
     #ghost_transform.LoadRGBImagesFromTarfile(tar, files, (32, 32, 3), 10000)
-    ghost_transform.InitaliseGhosts(size_grid = 3, num_octants = 4, max_occurances = 4)
+    ghost_transform.InitaliseGhosts(size_grid = 3, num_octants = 4, max_occurances = 2)
     #print(ghost_transform.loader.gray_flattened.shape)
     
-    ghost_transform.HouseHolderQRDecomposition()
+    # ghost_transform.HouseHolderQRDecomposition()
 
     # images_to_display = np.arange(0, 64, 1, dtype=int)
     # # images_to_display = np.arange(0, 1024, 16, dtype=int)
     # # ghost_transform.DisplayImages(ghost_transform.ghost_basis_images, images_to_display)
     
-    location = './ghost_transform_3_basis_4repeats'
+    location = './ghost_transform_3_basis_2repeats'
 
-    ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images), 'ghosts_abs_', location)
-    ghost_transform.SaveAllImages(np.real(ghost_transform.ghost_basis_images), 'ghosts_real_', location)
-    ghost_transform.SaveAllImages(np.angle(ghost_transform.ghost_basis_images), 'ghosts_angle_', location)
+    # ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images), 'ghosts_abs_', location)
+    # ghost_transform.SaveAllImages(np.real(ghost_transform.ghost_basis_images), 'ghosts_real_', location)
+    # ghost_transform.SaveAllImages(np.angle(ghost_transform.ghost_basis_images), 'ghosts_angle_', location)
 
-    ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images_ifft), "ghosts_ifft_abs_", location)
-    ghost_transform.SaveAllImages(np.angle(ghost_transform.ghost_basis_images_ifft), "ghosts_ifft_angle_", location)
-    ghost_transform.SaveAllImages(np.real(ghost_transform.ghost_basis_images_ifft), "ghosts_ifft_real_", location)
-    ghost_transform.SaveAllImages(np.imag(ghost_transform.ghost_basis_images_ifft), "ghosts_ifft_imag_", location)
+    # ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images_ifft), "ghosts_ifft_abs_", location)
+    # ghost_transform.SaveAllImages(np.angle(ghost_transform.ghost_basis_images_ifft), "ghosts_ifft_angle_", location)
+    # ghost_transform.SaveAllImages(np.real(ghost_transform.ghost_basis_images_ifft), "ghosts_ifft_real_", location)
+    # ghost_transform.SaveAllImages(np.imag(ghost_transform.ghost_basis_images_ifft), "ghosts_ifft_imag_", location)
     
-    ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images_fft), "ghosts_fft_abs_", location)
-    ghost_transform.SaveAllImages(np.angle(ghost_transform.ghost_basis_images_fft), "ghosts_fft_angle_", location)
-    ghost_transform.SaveAllImages(np.real(ghost_transform.ghost_basis_images_fft), "ghosts_fft_real_", location)
-    ghost_transform.SaveAllImages(np.imag(ghost_transform.ghost_basis_images_fft), "ghosts_fft_imag_", location)
+    # ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images_fft), "ghosts_fft_abs_", location)
+    # ghost_transform.SaveAllImages(np.angle(ghost_transform.ghost_basis_images_fft), "ghosts_fft_angle_", location)
+    # ghost_transform.SaveAllImages(np.real(ghost_transform.ghost_basis_images_fft), "ghosts_fft_real_", location)
+    # ghost_transform.SaveAllImages(np.imag(ghost_transform.ghost_basis_images_fft), "ghosts_fft_imag_", location)
     
-    ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images_noshift_ifft), "ghosts_noshift_ifft_abs_", location)
-    ghost_transform.SaveAllImages(np.angle(ghost_transform.ghost_basis_images_noshift_ifft), "ghosts_noshift_ifft_angle_", location)
-    ghost_transform.SaveAllImages(np.real(ghost_transform.ghost_basis_images_noshift_ifft), "ghosts_noshift_ifft_real_", location)
-    ghost_transform.SaveAllImages(np.imag(ghost_transform.ghost_basis_images_noshift_ifft), "ghosts_noshift_ifft_imag_", location)
+    # ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images_noshift_ifft), "ghosts_noshift_ifft_abs_", location)
+    # ghost_transform.SaveAllImages(np.angle(ghost_transform.ghost_basis_images_noshift_ifft), "ghosts_noshift_ifft_angle_", location)
+    # ghost_transform.SaveAllImages(np.real(ghost_transform.ghost_basis_images_noshift_ifft), "ghosts_noshift_ifft_real_", location)
+    # ghost_transform.SaveAllImages(np.imag(ghost_transform.ghost_basis_images_noshift_ifft), "ghosts_noshift_ifft_imag_", location)
 
-    ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images_1dshift_ifft), "ghosts_1dshift_ifft_abs_", location)
-    ghost_transform.SaveAllImages(np.angle(ghost_transform.ghost_basis_images_1dshift_ifft), "ghosts_1dshift_ifft_angle_", location)
-    ghost_transform.SaveAllImages(np.real(ghost_transform.ghost_basis_images_1dshift_ifft), "ghosts_1dshift_ifft_real_", location)
-    ghost_transform.SaveAllImages(np.imag(ghost_transform.ghost_basis_images_1dshift_ifft), "ghosts_1dshift_ifft_imag_", location)
+    # ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images_1dshift_ifft), "ghosts_1dshift_ifft_abs_", location)
+    # ghost_transform.SaveAllImages(np.angle(ghost_transform.ghost_basis_images_1dshift_ifft), "ghosts_1dshift_ifft_angle_", location)
+    # ghost_transform.SaveAllImages(np.real(ghost_transform.ghost_basis_images_1dshift_ifft), "ghosts_1dshift_ifft_real_", location)
+    # ghost_transform.SaveAllImages(np.imag(ghost_transform.ghost_basis_images_1dshift_ifft), "ghosts_1dshift_ifft_imag_", location)
 
 
         
-    ghost_transform.SaveAllImages(np.abs(ghost_transform.fourierghost_basis_images), "rf_abs_", location)
-    ghost_transform.SaveAllImages(np.angle(ghost_transform.fourierghost_basis_images), "rf_phase_", location)
-    ghost_transform.SaveAllImages(np.real(ghost_transform.fourierghost_basis_images), "rf_real_", location)
-    ghost_transform.SaveAllImages(np.imag(ghost_transform.fourierghost_basis_images), "rf_imag_", location)
+    # ghost_transform.SaveAllImages(np.abs(ghost_transform.fourierghost_basis_images), "rf_abs_", location)
+    # ghost_transform.SaveAllImages(np.angle(ghost_transform.fourierghost_basis_images), "rf_phase_", location)
+    # ghost_transform.SaveAllImages(np.real(ghost_transform.fourierghost_basis_images), "rf_real_", location)
+    # ghost_transform.SaveAllImages(np.imag(ghost_transform.fourierghost_basis_images), "rf_imag_", location)
 
-    ghost_transform.SaveAllImages(np.abs(ghost_transform.fourierghost_basis_images_fft), "rf_fft_abs_", location)
-    ghost_transform.SaveAllImages(np.angle(ghost_transform.fourierghost_basis_images_fft), "rf_fft_phase_", location)
-    ghost_transform.SaveAllImages(np.real(ghost_transform.fourierghost_basis_images_fft), "rf_fft_real_", location)
-    ghost_transform.SaveAllImages(np.imag(ghost_transform.fourierghost_basis_images_fft), "rf_fft_imag_", location)
+    # ghost_transform.SaveAllImages(np.abs(ghost_transform.fourierghost_basis_images_fft), "rf_fft_abs_", location)
+    # ghost_transform.SaveAllImages(np.angle(ghost_transform.fourierghost_basis_images_fft), "rf_fft_phase_", location)
+    # ghost_transform.SaveAllImages(np.real(ghost_transform.fourierghost_basis_images_fft), "rf_fft_real_", location)
+    # ghost_transform.SaveAllImages(np.imag(ghost_transform.fourierghost_basis_images_fft), "rf_fft_imag_", location)
 
-    ghost_transform.SaveAllImages(np.abs(ghost_transform.fourierghost_basis_images_ifft), "rf_ifft_abs_", location)
-    ghost_transform.SaveAllImages(np.angle(ghost_transform.fourierghost_basis_images_ifft), "rf_ifft_phase_", location)
-    ghost_transform.SaveAllImages(np.real(ghost_transform.fourierghost_basis_images_ifft), "rf_ifft_real_", location)
-    ghost_transform.SaveAllImages(np.imag(ghost_transform.fourierghost_basis_images_ifft), "rf_ifft_imag_", location)
+    # ghost_transform.SaveAllImages(np.abs(ghost_transform.fourierghost_basis_images_ifft), "rf_ifft_abs_", location)
+    # ghost_transform.SaveAllImages(np.angle(ghost_transform.fourierghost_basis_images_ifft), "rf_ifft_phase_", location)
+    # ghost_transform.SaveAllImages(np.real(ghost_transform.fourierghost_basis_images_ifft), "rf_ifft_real_", location)
+    # ghost_transform.SaveAllImages(np.imag(ghost_transform.fourierghost_basis_images_ifft), "rf_ifft_imag_", location)
 
-    ghost_transform.SaveAllImages(np.abs(ghost_transform.fourierghost_basis_images_noshift_fft), "rf_noshift_fft_abs_", location)
-    ghost_transform.SaveAllImages(np.angle(ghost_transform.fourierghost_basis_images_noshift_fft), "rf_noshift_fft_phase_", location)
-    ghost_transform.SaveAllImages(np.real(ghost_transform.fourierghost_basis_images_noshift_fft), "rf_noshift_fft_real_", location)
-    ghost_transform.SaveAllImages(np.imag(ghost_transform.fourierghost_basis_images_noshift_fft), "rf_noshift_fft_imag_", location)
+    # ghost_transform.SaveAllImages(np.abs(ghost_transform.fourierghost_basis_images_noshift_fft), "rf_noshift_fft_abs_", location)
+    # ghost_transform.SaveAllImages(np.angle(ghost_transform.fourierghost_basis_images_noshift_fft), "rf_noshift_fft_phase_", location)
+    # ghost_transform.SaveAllImages(np.real(ghost_transform.fourierghost_basis_images_noshift_fft), "rf_noshift_fft_real_", location)
+    # ghost_transform.SaveAllImages(np.imag(ghost_transform.fourierghost_basis_images_noshift_fft), "rf_noshift_fft_imag_", location)
 
 
-    ghost_transform.SaveAllImages(np.imag(ghost_transform.fourierghost_basis_images_shiftedrow), "rf_shiftedrow_imag_", location)
-    ghost_transform.SaveAllImages(np.real(ghost_transform.fourierghost_basis_images_shiftedrow), "rf_shiftedrow_real_", location)
-    ghost_transform.SaveAllImages(np.imag(ghost_transform.fourierghost_basis_images_shiftedcol), "rf_shiftedcol_imag_", location)
-    ghost_transform.SaveAllImages(np.real(ghost_transform.fourierghost_basis_images_shiftedcol), "rf_shiftedcol_real_", location)
+    # ghost_transform.SaveAllImages(np.imag(ghost_transform.fourierghost_basis_images_shiftedrow), "rf_shiftedrow_imag_", location)
+    # ghost_transform.SaveAllImages(np.real(ghost_transform.fourierghost_basis_images_shiftedrow), "rf_shiftedrow_real_", location)
+    # ghost_transform.SaveAllImages(np.imag(ghost_transform.fourierghost_basis_images_shiftedcol), "rf_shiftedcol_imag_", location)
+    # ghost_transform.SaveAllImages(np.real(ghost_transform.fourierghost_basis_images_shiftedcol), "rf_shiftedcol_real_", location)
+
+
+    ghost_transform.QRWithRadonFlattening()
+    ghost_transform.SaveAllImages(ghost_transform.ghost_sinograms, "sinograms_", location)
+    ghost_transform.SaveAllImages(ghost_transform.ghost_basis_images, "ghosts_radon_", location)
+    ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images), "ghosts_abs_radon_", location)
+    ghost_transform.SaveAllImages(ghost_transform.sinogram_basis, "sinogram_basis_", location)
+    ghost_transform.SaveAllImages(np.abs(ghost_transform.sinogram_basis), "sinogram_abs_basis_", location)
 
     # hermite_order = 40
     # ghost_transform.DecomposeGhosts(10, ghost_transform.constructor.ghost_images)
