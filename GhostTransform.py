@@ -357,7 +357,9 @@ if __name__ == '__main__':
     #location = './ghost_transform_3_basis_4repeats_pca'
     location = './ghost_transform_3_big_pca'
     ghost_transform.SaveAllImages(ghost_transform.constructor.ghost_images, 'original_ghosts_', location)
-    ghost_transform.SaveAllImages(np.abs(ghost_transform.constructor.receptive_field_images), 'original_fourierghosts_', location)
+    ghost_transform.SaveAllImages(np.abs(ghost_transform.constructor.receptive_field_images), 'original_fourierghosts_abs_', location)
+    ghost_transform.SaveAllImages(np.real(ghost_transform.constructor.receptive_field_images), 'original_fourierghosts_real_', location)
+    ghost_transform.SaveAllImages(np.imag(ghost_transform.constructor.receptive_field_images), 'original_fourierghosts_imag_', location)
     
     ghost_transform.SaveAllImages(np.abs(ghost_transform.ghost_basis_images), 'ghosts_abs_', location)
     ghost_transform.SaveAllImages(np.real(ghost_transform.ghost_basis_images), 'ghosts_real_', location)
