@@ -1,6 +1,7 @@
 import numpy as np
 from radon.farey import Farey
 import os
+import random
 
 from Ghosts import Ghosts
 
@@ -64,6 +65,28 @@ class GhostCreator:
         self.ghosts = self.ghosts[1:]
         self.ghost_images = np.array([Ghost.ghost for Ghost in self.ghosts])
         self.receptive_field_images = np.array([Ghost.fttghost for Ghost in self.ghosts])
+    
+    def CreateBigGhosts(self, size_grid, num_octants, num_ghosts, num_elements_to_use):
+         # Generate the [p,q] for a set of 2PSE
+        self.Generate2PSEs(size_grid, num_octants)
+        num_elements = self.structuring_elements.shape[0]
+        
+        self.ghosts = []
+        for _ in range(num_ghosts):
+            ghost = Ghosts(self.N)
+            self.ghosts.append(ghost)
+            kernel_ids = []
+            for _ in range(num_elements_to_use):
+                k_id = np.random.randint(0, num_elements)
+                if k_id < num_elements:
+                    kernel_ids.append(k_id)
+            
+            self.CreateConvolutionGhost(ghost, kernel_ids)
+
+        self.ghost_images = np.array([Ghost.ghost for Ghost in self.ghosts])
+        self.receptive_field_images = np.array([Ghost.fttghost for Ghost in self.ghosts])
+        
+        return
     
     #   @fn Generate2PSEs (1)
     def Generate2PSEs(self, size_grid, num_octants):
